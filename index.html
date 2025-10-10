@@ -103,13 +103,14 @@
 @media (max-width: 600px) {
   #produtos {
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* empilha os produtos verticalmente */
     align-items: center;
   }
 
   .produto {
-    width: 90%;
-    max-width: 350px;
+    width: 100%;      /* ocupa toda a largura disponível */
+    max-width: 350px; /* mantém limite máximo */
+    margin: 5px 0;    /* espaço entre produtos */
   }
 
   .carrinho {
