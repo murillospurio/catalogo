@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Catálogo de Teste</title>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+      padding: 0;
+      background: url('fundo.png') no-repeat center center fixed;
+      background-size: cover;
+    }
+
+    h1 {
+      text-align: center;
+      color: #fff;
+      text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
+      margin-top: 20px;
+    }
+
+    #produtos {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px;
+    }
+
+    .produto {
+      border: 1px solid rgba(255,255,255,0.5);
+      background: rgba(255,255,255,0.8);
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      width: 200px;
+      height: 320px;
+      margin: 10px;
+      display: inline-flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .produto img {
+      height: 150px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .produto button {
+      padding: 3px 8px;
+      margin: 2px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: #fff;
+    }
+
+    .produto button:hover {
+      background-color: #0056b3;
+    }
+
+    .carrinho {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      border: 2px solid #000;
+      padding: 10px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 10px;
+      width: 200px;
+      height: 200px;
+      text-align: center;
+      z-index: 100;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .carrinho img {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 5px auto;
+    }
+
+    #itensCarrinho {
+      flex-grow: 1;
+      overflow-y: auto;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .carrinho button {
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+
+    /* Responsividade para telas menores */
+    @media (max-width: 600px) {
+      .produto {
+        width: 90%;
+      }
+
+      .carrinho {
+        width: 90px;
+        height: auto;
+        font-size: 12px;
+        padding: 5px;
+      }
+
+      .carrinho img {
+        width: 30px;
+        height: 30px;
+      }
+
+      .carrinho button {
+        font-size: 10px;
+        padding: 4px 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Catálogo de Teste</h1>
+  <div id="produtos"></div>
+
+  <div class="carrinho">
+    <img src="carrinho.png" alt="Carrinho">
+    <div id="itensCarrinho">Vazio</div>
+    <div>Total: R$ <span id="total">0.00</span></div>
+    <button onclick="confirmarPedido()">Confirmar Pedido</button>
+    <button onclick="cancelarPedido()">Cancelar Pedido</button>
+  </div>
+
+  <script>
+    const produtos = [
+      {id:1, nome:"Brahma", preco:4.00, estoque:30, img:"produto_1.png"},
+      {id:2, nome:"Skol", preco:5.00, estoque:30, img:"produto_2.png"},
+      {id:3, nome:"Coca-Cola", preco:4.00, estoque:20, img:"produto_3.png"},
+      {id:4, nome:"Coca-Cola zero", preco:5.00, estoque:15, img:"produto_4.png"},
+      {id:5, nome:"Sprite", preco:5.00, estoque:16, img:"produto_5.png"},
+      {id:6, nome:"Energético", preco:10.00, estoque:18, img:"produto_6.png"},
+      {id:7, nome:"Água sem gás", preco:3.00, estoque:23, img:"produto_7.png"},
+      {id:8, nome:"Original", preco:6.00, estoque:14, img:"produto_8.png"}
+    ];
+
+    let carrinho = {};
+
+    function mostrarProdutos() {
+      const div = document.getElementById('produtos');
+      div.innerHTML = '';
+      produtos.forEach(p => {
+        div.innerHTML += `
+          <div class="produto">
+            <img src="${p.img}" alt="${p.nome}">
+            <div>
+              <b>${p.nome}</b><br>
+              R$ ${p.preco.toFixed(2)}<br>
+              Estoque: ${p.estoque}
+            </div>
+            <div>
+              <button onclick="alterarQuantidade(${p.id}, -1)">-</button>
+              <span id="qtd-${p.id}">0</span>
+              <button onclick="alterarQuantidade(${p.id}, 1)">+</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function alterarQuantidade(id, delta) {
+      if (!carrinho[id]) carrinho[id] = 0;
+      const produto = produtos.find(p => p.id === id);
+      let novaQtd = carrinho[id] + delta;
+      if (novaQtd < 0) novaQtd = 0;
+      if (novaQtd > produto.estoque) novaQtd = produto.estoque;
+      carrinho[id] = novaQtd;
+      document.getElementById(`qtd-${id}`).innerText = novaQtd;
+      atualizarCarrinho();
+    }
+
+    function atualizarCarrinho() {
+      const div = document.getElementById('itensCarrinho');
+      div.innerHTML = '';
+      let total = 0;
+      let vazio = true;
+      for (let id in carrinho) {
+        if (carrinho[id] > 0) {
+          vazio = false;
+          const p = produtos.find(prod => prod.id == id);
+          total += p.preco * carrinho[id];
+          div.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco * carrinho[id]).toFixed(2)}<br>`;
+        }
+      }
+      if (vazio) div.innerHTML = 'Vazio';
+      document.getElementById('total').innerText = total.toFixed(2);
+    }
+
+    function cancelarPedido() {
+      carrinho = {};
+      mostrarProdutos();
+      atualizarCarrinho();
+    }
+
+    function confirmarPedido() {
+      if (Object.values(carrinho).every(q => q === 0)) {
+        alert("Carrinho vazio!");
+        return;
+      }
+      alert("Pedido confirmado!\n" + JSON.stringify(carrinho, null, 2));
+      cancelarPedido();
+    }
+
+    mostrarProdutos();
+  </script>
+</body>
+</html>
