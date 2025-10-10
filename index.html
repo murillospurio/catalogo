@@ -216,7 +216,7 @@
       atualizarCarrinho();
     }
 
-    function confirmarPedido() {
+  function confirmarPedido() {
   if (Object.values(carrinho).every(q => q === 0)) {
     alert("Carrinho vazio!");
     return;
@@ -227,34 +227,34 @@
     total: parseFloat(document.getElementById('total').innerText)
   };
 
-  // Mostra mensagem temporária na tela
   const divCarrinho = document.getElementById('itensCarrinho');
   divCarrinho.innerHTML = "Aguardando pagamento na maquininha... ⏳";
 
-  // Envia pedido para a API
-  fetch('https://seuapp.herokuapp.com/api/pagamento', {
+  fetch('https://maquina-bebida-3aa5e92574b0.herokuapp.com/api/pagamento', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(pedido)
   })
   .then(response => response.json())
   .then(data => {
-    // Aqui a API pode retornar o ID do pagamento ou link para o ESP32 monitorar
-    // Vamos simular um monitoramento simples com polling (checando status a cada 2s)
-    const pagamentoId = data.id; // Exemplo: ID retornado pela API
+    console.log('Resposta da API de pagamento:', data);
+    const pagamentoId = data.id;
+
     const intervalo = setInterval(() => {
-      fetch(`https://seuapp.herokuapp.com/api/status/${pagamentoId}`)
+      fetch(`https://maquina-bebida-3aa5e92574b0.herokuapp.com/api/status/${pagamentoId}`)
         .then(resp => resp.json())
         .then(statusData => {
-          if(statusData.status === 'concluido') {
+          console.log('Status recebido:', statusData);
+          if (statusData.status === 'concluido') {
             clearInterval(intervalo);
             divCarrinho.innerHTML = "Obrigado pela compra! 🎉";
-            cancelarPedido(); // Limpa carrinho e quantidades
+            cancelarPedido();
           }
-        });
-    }, 2000); // Checa a cada 2 segundos
+        })
+        .catch(err => console.error('Erro ao checar status:', err));
+    }, 2000);
+
+    setTimeout(() => clearInterval(intervalo), 120000); // tempo máximo 2min
   })
   .catch(error => {
     console.error('Erro no pagamento:', error);
