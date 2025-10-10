@@ -217,13 +217,50 @@
     }
 
     function confirmarPedido() {
-      if (Object.values(carrinho).every(q => q === 0)) {
-        alert("Carrinho vazio!");
-        return;
-      }
-      alert("Pedido confirmado!\n" + JSON.stringify(carrinho, null, 2));
-      cancelarPedido();
-    }
+  if (Object.values(carrinho).every(q => q === 0)) {
+    alert("Carrinho vazio!");
+    return;
+  }
+
+  const pedido = {
+    produtos: carrinho,
+    total: parseFloat(document.getElementById('total').innerText)
+  };
+
+  // Mostra mensagem temporária na tela
+  const divCarrinho = document.getElementById('itensCarrinho');
+  divCarrinho.innerHTML = "Aguardando pagamento na maquininha... ⏳";
+
+  // Envia pedido para a API
+  fetch('https://seuapp.herokuapp.com/api/pagamento', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(pedido)
+  })
+  .then(response => response.json())
+  .then(data => {
+    // Aqui a API pode retornar o ID do pagamento ou link para o ESP32 monitorar
+    // Vamos simular um monitoramento simples com polling (checando status a cada 2s)
+    const pagamentoId = data.id; // Exemplo: ID retornado pela API
+    const intervalo = setInterval(() => {
+      fetch(`https://seuapp.herokuapp.com/api/status/${pagamentoId}`)
+        .then(resp => resp.json())
+        .then(statusData => {
+          if(statusData.status === 'concluido') {
+            clearInterval(intervalo);
+            divCarrinho.innerHTML = "Obrigado pela compra! 🎉";
+            cancelarPedido(); // Limpa carrinho e quantidades
+          }
+        });
+    }, 2000); // Checa a cada 2 segundos
+  })
+  .catch(error => {
+    console.error('Erro no pagamento:', error);
+    divCarrinho.innerHTML = "Erro ao gerar pagamento!";
+  });
+}
 
     mostrarProdutos();
   </script>
