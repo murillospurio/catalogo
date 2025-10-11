@@ -99,39 +99,37 @@
       font-size: 12px;
     }
 
-/* Responsividade para telas menores */
-@media (max-width: 600px) {
-  #produtos {
-    display: flex;
-    flex-direction: column; /* empilha os produtos verticalmente */
-    align-items: center;
-  }
+    @media (max-width: 600px) {
+      #produtos {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
 
-  .produto {
-    width: 100%;      /* ocupa toda a largura disponível */
-    max-width: 350px; /* mantém limite máximo */
-    margin: 5px 0;    /* espaço entre produtos */
-  }
+      .produto {
+        width: 100%;
+        max-width: 350px;
+        margin: 5px 0;
+      }
 
-  .carrinho {
-    width: 90%;
-    right: 5%;
-    bottom: 10px;
-    height: auto;
-    font-size: 14px;
-  }
+      .carrinho {
+        width: 90%;
+        right: 5%;
+        bottom: 10px;
+        height: auto;
+        font-size: 14px;
+      }
 
-  .carrinho img {
-    width: 30px;
-    height: 30px;
-  }
+      .carrinho img {
+        width: 30px;
+        height: 30px;
+      }
 
-  .carrinho button {
-    font-size: 12px;
-    padding: 5px 8px;
-  }
-}
-
+      .carrinho button {
+        font-size: 12px;
+        padding: 5px 8px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -216,51 +214,56 @@
       atualizarCarrinho();
     }
 
-  function confirmarPedido() {
-  if (Object.values(carrinho).every(q => q === 0)) {
-    alert("Carrinho vazio!");
-    return;
-  }
+    function confirmarPedido() {
+      if (Object.values(carrinho).every(q => q === 0)) {
+        alert("Carrinho vazio!");
+        return;
+      }
 
-  const pedido = {
-    produtos: carrinho,
-    total: parseFloat(document.getElementById('total').innerText)
-  };
+      const pedido = {
+        produtos: carrinho,
+        total: parseFloat(document.getElementById('total').innerText)
+      };
 
-  const divCarrinho = document.getElementById('itensCarrinho');
-  divCarrinho.innerHTML = "Aguardando pagamento na maquininha... ⏳";
+      const divCarrinho = document.getElementById('itensCarrinho');
+      divCarrinho.innerHTML = "Aguardando pagamento na maquininha... ⏳";
 
-  fetch('https://maquina-bebida-3aa5e92574b0.herokuapp.com/api/pagamento', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(pedido)
-  })
-  .then(response => response.json())
-  .then(data => {
-    console.log('Resposta da API de pagamento:', data);
-    const pagamentoId = data.id;
+      fetch('https://maquina-bebida-3aa5e92574b0.herokuapp.com/api/pagamento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pedido)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Resposta da API de pagamento:', data);
 
-    const intervalo = setInterval(() => {
-      fetch(`https://maquina-bebida-3aa5e92574b0.herokuapp.com/api/status/${pagamentoId}`)
-        .then(resp => resp.json())
-        .then(statusData => {
-          console.log('Status recebido:', statusData);
-          if (statusData.status === 'concluido') {
-            clearInterval(intervalo);
-            divCarrinho.innerHTML = "Obrigado pela compra! 🎉";
-            cancelarPedido();
-          }
-        })
-        .catch(err => console.error('Erro ao checar status:', err));
-    }, 2000);
+        if (!data.id) {
+          divCarrinho.innerHTML = "Erro ao gerar pagamento!";
+          console.error('Resposta inválida da API:', data);
+          return;
+        }
 
-    setTimeout(() => clearInterval(intervalo), 120000); // tempo máximo 2min
-  })
-  .catch(error => {
-    console.error('Erro no pagamento:', error);
-    divCarrinho.innerHTML = "Erro ao gerar pagamento!";
-  });
-}
+        const intervalo = setInterval(() => {
+          fetch(`https://maquina-bebida-3aa5e92574b0.herokuapp.com/pagamentos/processar?id=esp003`)
+            .then(resp => resp.json())
+            .then(statusData => {
+              console.log('Status recebido:', statusData);
+              if (statusData.signal === 'credito_disponivel') {
+                clearInterval(intervalo);
+                divCarrinho.innerHTML = "Obrigado pela compra! 🎉";
+                cancelarPedido();
+              }
+            })
+            .catch(err => console.error('Erro ao checar status:', err));
+        }, 2000);
+
+        setTimeout(() => clearInterval(intervalo), 120000); // máximo 2 minutos
+      })
+      .catch(error => {
+        console.error('Erro no pagamento:', error);
+        divCarrinho.innerHTML = "Erro ao gerar pagamento!";
+      });
+    }
 
     mostrarProdutos();
   </script>
