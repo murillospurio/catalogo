@@ -1,271 +1,269 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Catálogo de Teste</title>
-  <style>
-    body {
-      font-family: Arial;
-      margin: 0;
-      padding: 0;
-      background: url('fundo.png') no-repeat center center fixed;
-      background-size: cover;
-    }
+<meta charset="UTF-8">
+<title>Conveniencia Machine</title>
+<style>
+  body {
+    font-family: Arial;
+    margin: 0;
+    padding: 0;
+    background: url('fundo.png') no-repeat center center fixed;
+    background-size: cover;
+    overflow-x: hidden;
+  }
 
-    h1 {
-      text-align: center;
-      color: #fff;
-      text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
-      margin-top: 20px;
-    }
+  h1 {
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
+    margin-top: 20px;
+  }
 
-    #produtos {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      padding: 20px;
-    }
+  /* Carrossel de produtos */
+  #produtos {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 50px 0;
+    gap: 20px;
+    justify-content: center;
+    scrollbar-width: none; /* Firefox */
+  }
+  #produtos::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 
-    .produto {
-      border: 1px solid rgba(255,255,255,0.5);
-      background: rgba(255,255,255,0.8);
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      width: 200px;
-      height: 320px;
-      margin: 10px;
-      display: inline-flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      box-sizing: border-box;
-    }
+  .produto {
+    flex: 0 0 250px;
+    height: 350px;
+    scroll-snap-align: center;
+    border-radius: 15px;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.3s, opacity 0.3s;
+    padding: 15px;
+    box-sizing: border-box;
+  }
 
-    .produto img {
-      height: 150px;
-      width: auto;
-      object-fit: contain;
-    }
+  .produto img {
+    width: auto;
+    height: 150px;
+    object-fit: contain;
+  }
 
-    .produto button {
-      padding: 3px 8px;
-      margin: 2px;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      background-color: #007bff;
-      color: #fff;
-    }
+  .produto button {
+    padding: 3px 8px;
+    margin: 2px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: #fff;
+  }
 
-    .produto button:hover {
-      background-color: #0056b3;
-    }
+  .produto button:hover {
+    background-color: #0056b3;
+  }
 
-    .carrinho {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      border: 2px solid #000;
-      padding: 10px;
-      background: rgba(255,255,255,0.9);
-      border-radius: 10px;
-      width: 200px;
-      height: 200px;
-      text-align: center;
-      z-index: 100;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
+  /* Destaque central */
+  .produto.central {
+    transform: scale(1.1);
+    opacity: 1;
+    z-index: 10;
+  }
 
-    .carrinho img {
-      width: 40px;
-      height: 40px;
-      margin: 0 auto 5px auto;
-    }
+  .produto:not(.central) {
+    transform: scale(0.8);
+    opacity: 0.6;
+    z-index: 1;
+  }
 
-    #itensCarrinho {
-      flex-grow: 1;
-      overflow-y: auto;
-      font-size: 14px;
-      margin-bottom: 5px;
-    }
+  /* Carrinho */
+  .carrinho {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    border: 2px solid #000;
+    padding: 10px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 10px;
+    width: 200px;
+    height: 200px;
+    text-align: center;
+    z-index: 100;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
 
-    .carrinho button {
-      padding: 5px 8px;
-      font-size: 12px;
-    }
+  .carrinho img {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 5px auto;
+  }
 
-    @media (max-width: 600px) {
-      #produtos {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
+  #itensCarrinho {
+    flex-grow: 1;
+    overflow-y: auto;
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
 
-      .produto {
-        width: 100%;
-        max-width: 350px;
-        margin: 5px 0;
-      }
+  .carrinho button {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
 
-      .carrinho {
-        width: 90%;
-        right: 5%;
-        bottom: 10px;
-        height: auto;
-        font-size: 14px;
-      }
-
-      .carrinho img {
-        width: 30px;
-        height: 30px;
-      }
-
-      .carrinho button {
-        font-size: 12px;
-        padding: 5px 8px;
-      }
-    }
-  </style>
+</style>
 </head>
 <body>
-  <h1>Catálogo de Teste</h1>
-  <div id="produtos"></div>
+<h1>Catálogo de Teste</h1>
+<div id="produtos"></div>
 
-  <div class="carrinho">
-    <img src="carrinho.png" alt="Carrinho">
-    <div id="itensCarrinho">Vazio</div>
-    <div>Total: R$ <span id="total">0.00</span></div>
-    <button onclick="confirmarPedido()">Confirmar Pedido</button>
-    <button onclick="cancelarPedido()">Cancelar Pedido</button>
-  </div>
+<div class="carrinho">
+  <img src="carrinho.png" alt="Carrinho">
+  <div id="itensCarrinho">Vazio</div>
+  <div>Total: R$ <span id="total">0.00</span></div>
+  <button onclick="confirmarPedido()">Confirmar Pedido</button>
+  <button onclick="cancelarPedido()">Cancelar Pedido</button>
+</div>
 
-  <script>
-    const produtos = [
-      {id:1, nome:"Brahma", preco:4.00, estoque:30, img:"produto_1.png"},
-      {id:2, nome:"Skol", preco:5.00, estoque:30, img:"produto_2.png"},
-      {id:3, nome:"Coca-Cola", preco:4.00, estoque:20, img:"produto_3.png"},
-      {id:4, nome:"Coca-Cola zero", preco:5.00, estoque:15, img:"produto_4.png"},
-      {id:5, nome:"Sprite", preco:5.00, estoque:16, img:"produto_5.png"},
-      {id:6, nome:"Energético", preco:10.00, estoque:18, img:"produto_6.png"},
-      {id:7, nome:"Água sem gás", preco:3.00, estoque:23, img:"produto_7.png"},
-      {id:8, nome:"Original", preco:6.00, estoque:14, img:"produto_8.png"}
-    ];
+<script>
+const produtos = [
+  {id:1, nome:"Brahma", preco:4.00, estoque:30, img:"produto_1.png"},
+  {id:2, nome:"Skol", preco:5.00, estoque:30, img:"produto_2.png"},
+  {id:3, nome:"Coca-Cola", preco:4.00, estoque:20, img:"produto_3.png"},
+  {id:4, nome:"Coca-Cola zero", preco:5.00, estoque:15, img:"produto_4.png"},
+  {id:5, nome:"Sprite", preco:5.00, estoque:16, img:"produto_5.png"},
+  {id:6, nome:"Energético", preco:10.00, estoque:18, img:"produto_6.png"},
+  {id:7, nome:"Água sem gás", preco:3.00, estoque:23, img:"produto_7.png"},
+  {id:8, nome:"Original", preco:6.00, estoque:14, img:"produto_8.png"}
+];
 
-    let carrinho = {};
+let carrinho = {};
 
-    function mostrarProdutos() {
-      const div = document.getElementById('produtos');
-      div.innerHTML = '';
-      produtos.forEach(p => {
-        div.innerHTML += `
-          <div class="produto">
-            <img src="${p.img}" alt="${p.nome}">
-            <div>
-              <b>${p.nome}</b><br>
-              R$ ${p.preco.toFixed(2)}<br>
-              Estoque: ${p.estoque}
-            </div>
-            <div>
-              <button onclick="alterarQuantidade(${p.id}, -1)">-</button>
-              <span id="qtd-${p.id}">0</span>
-              <button onclick="alterarQuantidade(${p.id}, 1)">+</button>
-            </div>
-          </div>
-        `;
-      });
+function mostrarProdutos() {
+  const div = document.getElementById('produtos');
+  div.innerHTML = '';
+  produtos.forEach((p, idx) => {
+    const prodDiv = document.createElement('div');
+    prodDiv.className = 'produto';
+    prodDiv.innerHTML = `
+      <img src="${p.img}" alt="${p.nome}">
+      <div>
+        <b>${p.nome}</b><br>
+        R$ ${p.preco.toFixed(2)}<br>
+        Estoque: ${p.estoque}
+      </div>
+      <div>
+        <button onclick="alterarQuantidade(${p.id}, -1)">-</button>
+        <span id="qtd-${p.id}">0</span>
+        <button onclick="alterarQuantidade(${p.id}, 1)">+</button>
+      </div>
+    `;
+    div.appendChild(prodDiv);
+  });
+
+  destacarCentral(); // destaca o primeiro ao iniciar
+}
+
+// Atualiza carrinho
+function alterarQuantidade(id, delta) {
+  if (!carrinho[id]) carrinho[id] = 0;
+  const produto = produtos.find(p => p.id === id);
+  let novaQtd = carrinho[id] + delta;
+  if (novaQtd < 0) novaQtd = 0;
+  if (novaQtd > produto.estoque) novaQtd = produto.estoque;
+  carrinho[id] = novaQtd;
+  document.getElementById(`qtd-${id}`).innerText = novaQtd;
+  atualizarCarrinho();
+}
+
+function atualizarCarrinho() {
+  const div = document.getElementById('itensCarrinho');
+  div.innerHTML = '';
+  let total = 0;
+  let vazio = true;
+  for (let id in carrinho) {
+    if (carrinho[id] > 0) {
+      vazio = false;
+      const p = produtos.find(prod => prod.id == id);
+      total += p.preco * carrinho[id];
+      div.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco * carrinho[id]).toFixed(2)}<br>`;
     }
+  }
+  if (vazio) div.innerHTML = 'Vazio';
+  document.getElementById('total').innerText = total.toFixed(2);
+}
 
-    function alterarQuantidade(id, delta) {
-      if (!carrinho[id]) carrinho[id] = 0;
-      const produto = produtos.find(p => p.id === id);
-      let novaQtd = carrinho[id] + delta;
-      if (novaQtd < 0) novaQtd = 0;
-      if (novaQtd > produto.estoque) novaQtd = produto.estoque;
-      carrinho[id] = novaQtd;
-      document.getElementById(`qtd-${id}`).innerText = novaQtd;
-      atualizarCarrinho();
-    }
+function cancelarPedido() {
+  carrinho = {};
+  mostrarProdutos();
+  atualizarCarrinho();
+}
 
-    function atualizarCarrinho() {
-      const div = document.getElementById('itensCarrinho');
-      div.innerHTML = '';
-      let total = 0;
-      let vazio = true;
-      for (let id in carrinho) {
-        if (carrinho[id] > 0) {
-          vazio = false;
-          const p = produtos.find(prod => prod.id == id);
-          total += p.preco * carrinho[id];
-          div.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco * carrinho[id]).toFixed(2)}<br>`;
-        }
+// Destaca produto central no carrossel
+function destacarCentral() {
+  const produtosDivs = document.querySelectorAll('.produto');
+  const container = document.getElementById('produtos');
+
+  container.addEventListener('scroll', () => {
+    const meio = container.scrollLeft + container.offsetWidth / 2;
+    produtosDivs.forEach(p => {
+      const pCentro = p.offsetLeft + p.offsetWidth / 2;
+      if (Math.abs(meio - pCentro) < p.offsetWidth / 2) {
+        p.classList.add('central');
+      } else {
+        p.classList.remove('central');
       }
-      if (vazio) div.innerHTML = 'Vazio';
-      document.getElementById('total').innerText = total.toFixed(2);
-    }
+    });
+  });
 
-    function cancelarPedido() {
-      carrinho = {};
-      mostrarProdutos();
-      atualizarCarrinho();
-    }
+  // Inicial
+  produtosDivs[0].classList.add('central');
+}
 
-    function confirmarPedido() {
-      if (Object.values(carrinho).every(q => q === 0)) {
-        alert("Carrinho vazio!");
-        return;
-      }
+function confirmarPedido() {
+  if (Object.values(carrinho).every(q => q === 0)) {
+    alert("Carrinho vazio!");
+    return;
+  }
 
-      const pedido = {
-        produtos: carrinho,
-        total: parseFloat(document.getElementById('total').innerText)
-      };
+  const divCarrinho = document.getElementById('itensCarrinho');
+  divCarrinho.innerHTML = "Aguardando pagamento na maquininha... ⏳";
 
-      const divCarrinho = document.getElementById('itensCarrinho');
-      divCarrinho.innerHTML = "Aguardando pagamento na maquininha... ⏳";
+  const promessas = [];
+  const ipESP32 = "192.168.5.59"; // <--- substitua pelo IP real do seu ESP32
 
-      fetch('https://maquina-bebida.herokuapp.com/api/pagamento', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pedido)
-      })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Resposta da API de pagamento:', data);
-
-        if (!data.id) {
-          divCarrinho.innerHTML = "Erro ao gerar pagamento!";
-          console.error('Resposta inválida da API:', data);
-          return;
-        }
-
-        const intervalo = setInterval(() => {
-          fetch(`https://maquina-bebida.herokuapp.com/pagamentos/processar?id=esp003`)
+  for (let id in carrinho) {
+    const quantidade = carrinho[id];
+    if (quantidade > 0) {
+      const produto = produtos.find(p => p.id == id).nome;
+      for (let i = 0; i < quantidade; i++) {
+        const url = `http://${ipESP32}/pagar?produto=${encodeURIComponent(produto)}`;
+        promessas.push(
+          fetch(url)
             .then(resp => resp.json())
-            .then(statusData => {
-              console.log('Status recebido:', statusData);
-              if (statusData.signal === 'credito_disponivel') {
-                clearInterval(intervalo);
-                divCarrinho.innerHTML = "Obrigado pela compra! 🎉";
-                cancelarPedido();
-              }
-            })
-            .catch(err => console.error('Erro ao checar status:', err));
-        }, 2000);
-
-        setTimeout(() => clearInterval(intervalo), 120000); // máximo 2 minutos
-      })
-      .catch(error => {
-        console.error('Erro no pagamento:', error);
-        divCarrinho.innerHTML = "Erro ao gerar pagamento!";
-      });
+            .then(data => console.log('ESP32 respondeu:', data))
+            .catch(err => console.error('Erro no ESP32:', err))
+        );
+      }
     }
+  }
 
-    mostrarProdutos();
-  </script>
+  Promise.all(promessas).then(() => {
+    divCarrinho.innerHTML = "Pedido enviado! Aguardando liberação do produto... 🎉";
+    cancelarPedido();
+  }).catch(() => {
+    divCarrinho.innerHTML = "Erro ao enviar pedido para a máquina!";
+  });
+}
+
+mostrarProdutos();
+</script>
 </body>
 </html>
