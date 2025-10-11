@@ -228,7 +228,7 @@
       const divCarrinho = document.getElementById('itensCarrinho');
       divCarrinho.innerHTML = "Aguardando pagamento na maquininha... ⏳";
 
-      fetch('https://maquina-bebida-3aa5e92574b0.herokuapp.com/api/pagamento', {
+      fetch('https://maquina-bebida.herokuapp.com/api/pagamento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pedido)
@@ -244,7 +244,7 @@
         }
 
         const intervalo = setInterval(() => {
-          fetch(`https://maquina-bebida-3aa5e92574b0.herokuapp.com/pagamentos/processar?id=esp003`)
+          fetch(`https://maquina-bebida.herokuapp.com/pagamentos/processar?id=esp003`)
             .then(resp => resp.json())
             .then(statusData => {
               console.log('Status recebido:', statusData);
