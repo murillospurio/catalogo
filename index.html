@@ -25,60 +25,58 @@
     display: flex;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    padding: 50px 25vw; /* adiciona espaço nas laterais para centralizar 1º e último */
-    gap: 40px;
-    justify-content: flex-start;
-    scrollbar-width: none;
+    padding: 50px 0;
+    gap: 20px;
+    justify-content: center;
+    scrollbar-width: none; /* Firefox */
   }
   #produtos::-webkit-scrollbar { display: none; }
 
   .produto {
     flex: 0 0 250px;
-    height: 380px;
+    height: 380px; /* aumentei altura */
     scroll-snap-align: center;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.95);
+    border-radius: 15px;
+    background: rgba(255,255,255,0.9);
     box-shadow: 0 6px 10px rgba(0,0,0,0.3);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
     transition: transform 0.3s, opacity 0.3s;
-    padding: 20px;
+    padding: 15px;
     box-sizing: border-box;
   }
 
   .produto img {
-    width: 180px;
-    height: 180px;
+    width: auto;
+    height: 200px; /* aumentei tamanho das imagens */
     object-fit: contain;
-    display: block;
-    margin: 0 auto;
   }
 
   .produto button {
-    padding: 5px 10px;
+    padding: 6px 12px; /* aumentei tamanho dos botões */
     margin: 2px;
     cursor: pointer;
     border: none;
     border-radius: 5px;
     background-color: #007bff;
     color: #fff;
+    font-size: 14px;
   }
 
   .produto button:hover {
     background-color: #0056b3;
   }
 
-  /* Destaque central */
   .produto.central {
-    transform: scale(1.15);
+    transform: scale(1.1);
     opacity: 1;
     z-index: 10;
   }
 
   .produto:not(.central) {
-    transform: scale(0.85);
+    transform: scale(0.85); /* ajustado */
     opacity: 0.6;
     z-index: 1;
   }
@@ -92,8 +90,8 @@
     padding: 10px;
     background: rgba(255,255,255,0.9);
     border-radius: 10px;
-    width: 220px;
-    height: 220px;
+    width: 220px; /* aumentei largura */
+    height: 220px; /* aumentei altura */
     text-align: center;
     z-index: 100;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
@@ -103,8 +101,8 @@
   }
 
   .carrinho img {
-    width: 45px;
-    height: 45px;
+    width: 50px;
+    height: 50px;
     margin: 0 auto 5px auto;
   }
 
@@ -116,8 +114,8 @@
   }
 
   .carrinho button {
-    padding: 5px 8px;
-    font-size: 12px;
+    padding: 6px 12px; /* aumentei */
+    font-size: 14px;
   }
 
 </style>
@@ -130,7 +128,7 @@
   <img src="carrinho.png" alt="Carrinho">
   <div id="itensCarrinho">Vazio</div>
   <div>Total: R$ <span id="total">0.00</span></div>
-  <button onclick="confirmarPedido()">Confirmar Pedido</button>
+  <button id="confirmarBtn">Confirmar Pedido</button>
   <button onclick="cancelarPedido()">Cancelar Pedido</button>
 </div>
 
@@ -151,12 +149,12 @@ let carrinho = {};
 function mostrarProdutos() {
   const div = document.getElementById('produtos');
   div.innerHTML = '';
-  produtos.forEach(p => {
+  produtos.forEach((p, idx) => {
     const prodDiv = document.createElement('div');
     prodDiv.className = 'produto';
     prodDiv.innerHTML = `
       <img src="${p.img}" alt="${p.nome}">
-      <div style="text-align:center">
+      <div>
         <b>${p.nome}</b><br>
         R$ ${p.preco.toFixed(2)}<br>
         Estoque: ${p.estoque}
@@ -173,7 +171,6 @@ function mostrarProdutos() {
   destacarCentral();
 }
 
-// Atualiza carrinho
 function alterarQuantidade(id, delta) {
   if (!carrinho[id]) carrinho[id] = 0;
   const produto = produtos.find(p => p.id === id);
@@ -208,12 +205,11 @@ function cancelarPedido() {
   atualizarCarrinho();
 }
 
-// Destaca produto central no carrossel
 function destacarCentral() {
+  const produtosDivs = document.querySelectorAll('.produto');
   const container = document.getElementById('produtos');
-  const produtosDivs = container.querySelectorAll('.produto');
 
-  function atualizarCentral() {
+  container.addEventListener('scroll', () => {
     const meio = container.scrollLeft + container.offsetWidth / 2;
     produtosDivs.forEach(p => {
       const pCentro = p.offsetLeft + p.offsetWidth / 2;
@@ -223,47 +219,57 @@ function destacarCentral() {
         p.classList.remove('central');
       }
     });
-  }
+  });
 
-  container.addEventListener('scroll', atualizarCentral);
-  atualizarCentral(); // inicial
+  produtosDivs[0].classList.add('central');
 }
 
-function confirmarPedido() {
+// ----- FUNÇÃO CONFIRMAR PEDIDO (AJUSTADA) -----
+document.getElementById('confirmarBtn').addEventListener('click', function() {
   if (Object.values(carrinho).every(q => q === 0)) {
     alert("Carrinho vazio!");
     return;
   }
 
   const divCarrinho = document.getElementById('itensCarrinho');
-  divCarrinho.innerHTML = "Aguardando pagamento na maquininha... ⏳";
+  divCarrinho.innerHTML = "⏳ Aguardando pagamento na maquininha...";
 
-  const promessas = [];
-  const ipESP32 = "192.168.5.57"; // <--- substitua pelo IP real do seu ESP32
-
+  // Monta pedido completo
+  const items = [];
+  let total = 0;
   for (let id in carrinho) {
-    const quantidade = carrinho[id];
-    if (quantidade > 0) {
-      const produto = produtos.find(p => p.id == id).nome;
-      for (let i = 0; i < quantidade; i++) {
-        const url = `http://${ipESP32}/pagar?produto=${encodeURIComponent(produto)}`;
-        promessas.push(
-          fetch(url)
-            .then(resp => resp.json())
-            .then(data => console.log('ESP32 respondeu:', data))
-            .catch(err => console.error('Erro no ESP32:', err))
-        );
-      }
+    const qtd = carrinho[id];
+    if (qtd > 0) {
+      const p = produtos.find(prod => prod.id == id);
+      items.push({ name: p.nome.toLowerCase().replace(/\s/g,"_"), qty: qtd });
+      total += p.preco * qtd;
     }
   }
 
-  Promise.all(promessas).then(() => {
-    divCarrinho.innerHTML = "Pedido enviado! Aguardando liberação do produto... 🎉";
-    cancelarPedido();
-  }).catch(() => {
-    divCarrinho.innerHTML = "Erro ao enviar pedido para a máquina!";
+  const pedido = {
+    order_id: "PED-" + Math.floor(Math.random()*10000),
+    total: total,
+    items: items
+  };
+
+  const ipESP32A = "192.168.5.59"; // <-- coloque o IP real do seu ESP32 A
+
+  fetch(`http://${ipESP32A}/pedido`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(pedido)
+  })
+  .then(resp => resp.text())
+  .then(data => {
+    console.log("Resposta do ESP32 A:", data);
+    divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto...";
+    // NÃO limpa carrinho ainda, mantém visualização até confirmar no ESP32 B
+  })
+  .catch(err => {
+    console.error("Erro ao enviar pedido:", err);
+    divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
   });
-}
+});
 
 mostrarProdutos();
 </script>
