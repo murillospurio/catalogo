@@ -20,7 +20,6 @@
     margin-top: 20px;
   }
 
-  /* Carrossel de produtos */
   #produtos {
     display: flex;
     overflow-x: auto;
@@ -28,13 +27,13 @@
     padding: 50px 0;
     gap: 20px;
     justify-content: center;
-    scrollbar-width: none; /* Firefox */
+    scrollbar-width: none;
   }
   #produtos::-webkit-scrollbar { display: none; }
 
   .produto {
     flex: 0 0 250px;
-    height: 380px; /* aumentei altura */
+    height: 380px;
     scroll-snap-align: center;
     border-radius: 15px;
     background: rgba(255,255,255,0.9);
@@ -50,12 +49,12 @@
 
   .produto img {
     width: auto;
-    height: 200px; /* aumentei tamanho das imagens */
+    height: 200px;
     object-fit: contain;
   }
 
   .produto button {
-    padding: 6px 12px; /* aumentei tamanho dos botões */
+    padding: 6px 12px;
     margin: 2px;
     cursor: pointer;
     border: none;
@@ -76,12 +75,11 @@
   }
 
   .produto:not(.central) {
-    transform: scale(0.85); /* ajustado */
+    transform: scale(0.85);
     opacity: 0.6;
     z-index: 1;
   }
 
-  /* Carrinho */
   .carrinho {
     position: fixed;
     bottom: 20px;
@@ -90,8 +88,8 @@
     padding: 10px;
     background: rgba(255,255,255,0.9);
     border-radius: 10px;
-    width: 220px; /* aumentei largura */
-    height: 220px; /* aumentei altura */
+    width: 220px;
+    height: 220px;
     text-align: center;
     z-index: 100;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
@@ -114,10 +112,9 @@
   }
 
   .carrinho button {
-    padding: 6px 12px; /* aumentei */
+    padding: 6px 12px;
     font-size: 14px;
   }
-
 </style>
 </head>
 <body>
@@ -145,11 +142,13 @@ const produtos = [
 ];
 
 let carrinho = {};
+let timerLimpeza = null;
 
+// Mostrar produtos
 function mostrarProdutos() {
   const div = document.getElementById('produtos');
   div.innerHTML = '';
-  produtos.forEach((p, idx) => {
+  produtos.forEach((p) => {
     const prodDiv = document.createElement('div');
     prodDiv.className = 'produto';
     prodDiv.innerHTML = `
@@ -167,10 +166,10 @@ function mostrarProdutos() {
     `;
     div.appendChild(prodDiv);
   });
-
   destacarCentral();
 }
 
+// Alterar quantidade e resetar timer de limpeza
 function alterarQuantidade(id, delta) {
   if (!carrinho[id]) carrinho[id] = 0;
   const produto = produtos.find(p => p.id === id);
@@ -180,8 +179,10 @@ function alterarQuantidade(id, delta) {
   carrinho[id] = novaQtd;
   document.getElementById(`qtd-${id}`).innerText = novaQtd;
   atualizarCarrinho();
+  resetTimerLimpeza();
 }
 
+// Atualiza carrinho
 function atualizarCarrinho() {
   const div = document.getElementById('itensCarrinho');
   div.innerHTML = '';
@@ -199,16 +200,18 @@ function atualizarCarrinho() {
   document.getElementById('total').innerText = total.toFixed(2);
 }
 
+// Cancelar pedido manualmente
 function cancelarPedido() {
   carrinho = {};
   mostrarProdutos();
   atualizarCarrinho();
+  resetTimerLimpeza(); // reinicia timer caso cancele
 }
 
+// Destacar produto central
 function destacarCentral() {
   const produtosDivs = document.querySelectorAll('.produto');
   const container = document.getElementById('produtos');
-
   container.addEventListener('scroll', () => {
     const meio = container.scrollLeft + container.offsetWidth / 2;
     produtosDivs.forEach(p => {
@@ -220,10 +223,10 @@ function destacarCentral() {
       }
     });
   });
-
   produtosDivs[0].classList.add('central');
 }
 
+// ----- CONFIRMAR PEDIDO -----
 document.getElementById('confirmarBtn').addEventListener('click', function() {
   if (Object.values(carrinho).every(q => q === 0)) {
     alert("Carrinho vazio!");
@@ -231,11 +234,8 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   }
 
   const divCarrinho = document.getElementById('itensCarrinho');
-
-  // Mantém os itens no carrinho e mostra mensagem de aguardando pagamento
   divCarrinho.innerHTML = "⏳ Aguardando pagamento na maquininha...";
 
-  // Monta pedido completo
   const items = [];
   let total = 0;
   for (let id in carrinho) {
@@ -253,9 +253,8 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
     items: items
   };
 
-  const ipESP32A = "192.168.5.59"; // Coloque aqui o IP real do seu ESP32 A
+  const ipESP32A = "192.168.5.59"; // Coloque o IP real do ESP32 A
 
-  // Envia pedido para o ESP32 A
   fetch(`http://${ipESP32A}/pedido`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -264,18 +263,27 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   .then(resp => resp.text())
   .then(data => {
     console.log("Resposta do ESP32 A:", data);
-
-    // Atualiza status sem apagar carrinho
     divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto...";
-
-    // Se quiser, aqui você pode permitir limpar manualmente ao clicar "Cancelar Pedido"
+    resetTimerLimpeza(); // Reinicia timer após envio
   })
   .catch(err => {
     console.error("Erro ao enviar pedido:", err);
     divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
   });
+
+  resetTimerLimpeza();
 });
 
+// ----- TIMER PARA LIMPAR CARRINHO APOS 3 MINUTOS -----
+function resetTimerLimpeza() {
+  if (timerLimpeza) clearTimeout(timerLimpeza);
+  timerLimpeza = setTimeout(() => {
+    carrinho = {};
+    mostrarProdutos();
+    atualizarCarrinho();
+    console.log("Carrinho limpo por inatividade");
+  }, 180000); // 180.000ms = 3 minutos
+}
 
 mostrarProdutos();
 </script>
