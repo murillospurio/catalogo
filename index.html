@@ -24,98 +24,98 @@
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 50px 50px; /* <-- padding maior nas laterais */
+  padding: 50px 50px;
   gap: 20px;
-  justify-content: flex-start; /* manter flex-start para scroll */
+  justify-content: flex-start;
   scrollbar-width: none;
 }
 
-  #produtos::-webkit-scrollbar { display: none; }
+#produtos::-webkit-scrollbar { display: none; }
 
-  .produto {
-    flex: 0 0 250px;
-    height: 380px;
-    scroll-snap-align: center;
-    border-radius: 15px;
-    background: rgba(255,255,255,0.9);
-    box-shadow: 0 6px 10px rgba(0,0,0,0.3);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    transition: transform 0.3s, opacity 0.3s;
-    padding: 15px;
-    box-sizing: border-box;
-  }
+.produto {
+  flex: 0 0 250px;
+  height: 380px;
+  scroll-snap-align: center;
+  border-radius: 15px;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  transition: transform 0.3s, opacity 0.3s;
+  padding: 15px;
+  box-sizing: border-box;
+}
 
-  .produto img {
-    width: auto;
-    height: 200px;
-    object-fit: contain;
-  }
+.produto img {
+  width: auto;
+  height: 200px;
+  object-fit: contain;
+}
 
-  .produto button {
-    padding: 6px 12px;
-    margin: 2px;
-    cursor: pointer;
-    border: none;
-    border-radius: 5px;
-    background-color: #007bff;
-    color: #fff;
-    font-size: 14px;
-  }
+.produto button {
+  padding: 6px 12px;
+  margin: 2px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: #fff;
+  font-size: 14px;
+}
 
-  .produto button:hover {
-    background-color: #0056b3;
-  }
+.produto button:hover {
+  background-color: #0056b3;
+}
 
-  .produto.central {
-    transform: scale(1.1);
-    opacity: 1;
-    z-index: 10;
-  }
+.produto.central {
+  transform: scale(1.1);
+  opacity: 1;
+  z-index: 10;
+}
 
-  .produto:not(.central) {
-    transform: scale(0.85);
-    opacity: 0.6;
-    z-index: 1;
-  }
+.produto:not(.central) {
+  transform: scale(0.85);
+  opacity: 0.6;
+  z-index: 1;
+}
 
-  .carrinho {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    border: 2px solid #000;
-    padding: 10px;
-    background: rgba(255,255,255,0.9);
-    border-radius: 10px;
-    width: 220px;
-    height: 220px;
-    text-align: center;
-    z-index: 100;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
+.carrinho {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  border: 2px solid #000;
+  padding: 10px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 10px;
+  width: 220px;
+  height: 220px;
+  text-align: center;
+  z-index: 100;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
 
-  .carrinho img {
-    width: 50px;
-    height: 50px;
-    margin: 0 auto 5px auto;
-  }
+.carrinho img {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 5px auto;
+}
 
-  #itensCarrinho {
-    flex-grow: 1;
-    overflow-y: auto;
-    font-size: 14px;
-    margin-bottom: 5px;
-  }
+#itensCarrinho {
+  flex-grow: 1;
+  overflow-y: auto;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
 
-  .carrinho button {
-    padding: 6px 12px;
-    font-size: 14px;
-  }
+.carrinho button {
+  padding: 6px 12px;
+  font-size: 14px;
+}
 </style>
 </head>
 <body>
@@ -144,6 +144,8 @@ const produtos = [
 
 let carrinho = {};
 let timerLimpeza = null;
+let pedidoAtual = null;      // NOVO: pedido disponível para ESP32
+let pedidoTimeout = null;    // NOVO: timeout de 10s
 
 // Mostrar produtos
 function mostrarProdutos() {
@@ -170,7 +172,7 @@ function mostrarProdutos() {
   destacarCentral();
 }
 
-// Alterar quantidade e resetar timer de limpeza
+// Alterar quantidade
 function alterarQuantidade(id, delta) {
   if (!carrinho[id]) carrinho[id] = 0;
   const produto = produtos.find(p => p.id === id);
@@ -201,12 +203,14 @@ function atualizarCarrinho() {
   document.getElementById('total').innerText = total.toFixed(2);
 }
 
-// Cancelar pedido manualmente
+// Cancelar pedido
 function cancelarPedido() {
   carrinho = {};
   mostrarProdutos();
   atualizarCarrinho();
-  resetTimerLimpeza(); // reinicia timer caso cancele
+  resetTimerLimpeza();
+  pedidoAtual = null;
+  if(pedidoTimeout) { clearTimeout(pedidoTimeout); pedidoTimeout = null; }
 }
 
 // Destacar produto central
@@ -235,7 +239,7 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   }
 
   const divCarrinho = document.getElementById('itensCarrinho');
-  divCarrinho.innerHTML = "⏳ Aguardando pagamento na maquininha...";
+  divCarrinho.innerHTML = "⏳ Aguardando processar pedido (10s)...";
 
   const items = [];
   let total = 0;
@@ -248,34 +252,47 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
     }
   }
 
-  const pedido = {
-    order_id: "PED-" + Math.floor(Math.random()*10000),
+  // Cria pedido para ESP32 ler
+  pedidoAtual = {
+    order_id: "PED-" + Date.now(),
     total: total,
-    items: items
+    items: items,
+    status: "pending"
   };
 
-  const ipESP32A = "192.168.5.57"; // Coloque o IP real do ESP32 A
-
-  fetch(`http://${ipESP32A}/pedido`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(pedido)
-  })
-  .then(resp => resp.text())
-  .then(data => {
-    console.log("Resposta do ESP32 A:", data);
-    divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto...";
-    resetTimerLimpeza(); // Reinicia timer após envio
-  })
-  .catch(err => {
-    console.error("Erro ao enviar pedido:", err);
-    divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
-  });
+  // Timeout de 10s para mostrar falha se ESP32 não ler
+  if(pedidoTimeout) clearTimeout(pedidoTimeout);
+  pedidoTimeout = setTimeout(() => {
+    if(pedidoAtual && pedidoAtual.status === "pending") {
+      divCarrinho.innerHTML = "❌ Falha de conexão! Pedido não processado.";
+      pedidoAtual = null;
+    }
+  }, 10000);
 
   resetTimerLimpeza();
 });
 
-// ----- TIMER PARA LIMPAR CARRINHO APOS 3 MINUTOS -----
+// ----- FUNÇÕES PARA ESP32 CONSULTAR -----
+// Chamadas que o ESP32 faria via GET
+function getPedidoParaESP32() {
+  if(pedidoAtual && pedidoAtual.status === "pending") {
+    return pedidoAtual;
+  } else {
+    return null; // sem pedido disponível
+  }
+}
+
+// ESP32 confirma leitura
+function claimPedidoESP32(order_id) {
+  if(pedidoAtual && pedidoAtual.order_id === order_id && pedidoAtual.status === "pending") {
+    pedidoAtual.status = "claimed";
+    document.getElementById('itensCarrinho').innerHTML = "✅ Pedido confirmado! Produto sera liberado. Obrigada";
+    return true;
+  }
+  return false;
+}
+
+// Timer de limpeza do carrinho
 function resetTimerLimpeza() {
   if (timerLimpeza) clearTimeout(timerLimpeza);
   timerLimpeza = setTimeout(() => {
@@ -283,7 +300,7 @@ function resetTimerLimpeza() {
     mostrarProdutos();
     atualizarCarrinho();
     console.log("Carrinho limpo por inatividade");
-  }, 180000); // 180.000ms = 3 minutos
+  }, 180000); // 3 minutos
 }
 
 mostrarProdutos();
