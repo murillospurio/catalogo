@@ -25,37 +25,39 @@
     display: flex;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    padding: 50px 0;
-    gap: 20px;
-    justify-content: center;
-    scrollbar-width: none; /* Firefox */
+    padding: 50px 25vw; /* adiciona espaço nas laterais para centralizar 1º e último */
+    gap: 40px;
+    justify-content: flex-start;
+    scrollbar-width: none;
   }
-  #produtos::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+  #produtos::-webkit-scrollbar { display: none; }
 
   .produto {
     flex: 0 0 250px;
-    height: 350px;
+    height: 380px;
     scroll-snap-align: center;
-    border-radius: 15px;
-    background: rgba(255,255,255,0.9);
+    border-radius: 20px;
+    background: rgba(255,255,255,0.95);
     box-shadow: 0 6px 10px rgba(0,0,0,0.3);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
     transition: transform 0.3s, opacity 0.3s;
-    padding: 15px;
+    padding: 20px;
     box-sizing: border-box;
   }
 
   .produto img {
-    width: auto;
-    height: 150px;
+    width: 180px;
+    height: 180px;
     object-fit: contain;
+    display: block;
+    margin: 0 auto;
   }
 
   .produto button {
-    padding: 3px 8px;
+    padding: 5px 10px;
     margin: 2px;
     cursor: pointer;
     border: none;
@@ -70,13 +72,13 @@
 
   /* Destaque central */
   .produto.central {
-    transform: scale(1.1);
+    transform: scale(1.15);
     opacity: 1;
     z-index: 10;
   }
 
   .produto:not(.central) {
-    transform: scale(0.8);
+    transform: scale(0.85);
     opacity: 0.6;
     z-index: 1;
   }
@@ -90,8 +92,8 @@
     padding: 10px;
     background: rgba(255,255,255,0.9);
     border-radius: 10px;
-    width: 200px;
-    height: 200px;
+    width: 220px;
+    height: 220px;
     text-align: center;
     z-index: 100;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
@@ -101,8 +103,8 @@
   }
 
   .carrinho img {
-    width: 40px;
-    height: 40px;
+    width: 45px;
+    height: 45px;
     margin: 0 auto 5px auto;
   }
 
@@ -149,12 +151,12 @@ let carrinho = {};
 function mostrarProdutos() {
   const div = document.getElementById('produtos');
   div.innerHTML = '';
-  produtos.forEach((p, idx) => {
+  produtos.forEach(p => {
     const prodDiv = document.createElement('div');
     prodDiv.className = 'produto';
     prodDiv.innerHTML = `
       <img src="${p.img}" alt="${p.nome}">
-      <div>
+      <div style="text-align:center">
         <b>${p.nome}</b><br>
         R$ ${p.preco.toFixed(2)}<br>
         Estoque: ${p.estoque}
@@ -168,7 +170,7 @@ function mostrarProdutos() {
     div.appendChild(prodDiv);
   });
 
-  destacarCentral(); // destaca o primeiro ao iniciar
+  destacarCentral();
 }
 
 // Atualiza carrinho
@@ -208,10 +210,10 @@ function cancelarPedido() {
 
 // Destaca produto central no carrossel
 function destacarCentral() {
-  const produtosDivs = document.querySelectorAll('.produto');
   const container = document.getElementById('produtos');
+  const produtosDivs = container.querySelectorAll('.produto');
 
-  container.addEventListener('scroll', () => {
+  function atualizarCentral() {
     const meio = container.scrollLeft + container.offsetWidth / 2;
     produtosDivs.forEach(p => {
       const pCentro = p.offsetLeft + p.offsetWidth / 2;
@@ -221,10 +223,10 @@ function destacarCentral() {
         p.classList.remove('central');
       }
     });
-  });
+  }
 
-  // Inicial
-  produtosDivs[0].classList.add('central');
+  container.addEventListener('scroll', atualizarCentral);
+  atualizarCentral(); // inicial
 }
 
 function confirmarPedido() {
@@ -237,7 +239,7 @@ function confirmarPedido() {
   divCarrinho.innerHTML = "Aguardando pagamento na maquininha... ⏳";
 
   const promessas = [];
-  const ipESP32 = "192.168.5.59"; // <--- substitua pelo IP real do seu ESP32
+  const ipESP32 = "192.168.5.57"; // <--- substitua pelo IP real do seu ESP32
 
   for (let id in carrinho) {
     const quantidade = carrinho[id];
