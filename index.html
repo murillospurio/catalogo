@@ -144,8 +144,6 @@ const produtos = [
 
 let carrinho = {};
 let timerLimpeza = null;
-let pedidoAtual = null;      // NOVO: pedido disponível para ESP32
-let pedidoTimeout = null;    // NOVO: timeout de 10s
 
 // Mostrar produtos
 function mostrarProdutos() {
@@ -209,8 +207,6 @@ function cancelarPedido() {
   mostrarProdutos();
   atualizarCarrinho();
   resetTimerLimpeza();
-  pedidoAtual = null;
-  if(pedidoTimeout) { clearTimeout(pedidoTimeout); pedidoTimeout = null; }
 }
 
 // Destacar produto central
@@ -239,7 +235,7 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   }
 
   const divCarrinho = document.getElementById('itensCarrinho');
-  divCarrinho.innerHTML = "⏳ Aguardando processar pedido (10s)...";
+  divCarrinho.innerHTML = "⏳ Aguardando processar pedido ...";
 
   const items = [];
   let total = 0;
@@ -252,45 +248,30 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
     }
   }
 
-  // Cria pedido para ESP32 ler
-  pedidoAtual = {
+  const pedido = {
     order_id: "PED-" + Date.now(),
     total: total,
-    items: items,
-    status: "pending"
+    items: items
   };
 
-  // Timeout de 10s para mostrar falha se ESP32 não ler
-  if(pedidoTimeout) clearTimeout(pedidoTimeout);
-  pedidoTimeout = setTimeout(() => {
-    if(pedidoAtual && pedidoAtual.status === "pending") {
-      divCarrinho.innerHTML = "❌ Falha de conexão! Pedido não processado.";
-      pedidoAtual = null;
-    }
-  }, 10000);
+  // --- ALTERAÇÃO: envia para Flask / servidor externo ---
+  fetch('http://SEU_IP_PUBLICO_OU_DOMINIO/pedido', {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(pedido)
+  })
+  .then(resp => resp.json())
+  .then(data => {
+    console.log("Pedido enviado:", data);
+    divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto. Obrigada..";
+  })
+  .catch(err => {
+    console.error("Erro ao enviar pedido:", err);
+    divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
+  });
 
   resetTimerLimpeza();
 });
-
-// ----- FUNÇÕES PARA ESP32 CONSULTAR -----
-// Chamadas que o ESP32 faria via GET
-function getPedidoParaESP32() {
-  if(pedidoAtual && pedidoAtual.status === "pending") {
-    return pedidoAtual;
-  } else {
-    return null; // sem pedido disponível
-  }
-}
-
-// ESP32 confirma leitura
-function claimPedidoESP32(order_id) {
-  if(pedidoAtual && pedidoAtual.order_id === order_id && pedidoAtual.status === "pending") {
-    pedidoAtual.status = "claimed";
-    document.getElementById('itensCarrinho').innerHTML = "✅ Pedido confirmado! Produto sera liberado. Obrigada";
-    return true;
-  }
-  return false;
-}
 
 // Timer de limpeza do carrinho
 function resetTimerLimpeza() {
