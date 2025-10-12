@@ -224,7 +224,6 @@ function destacarCentral() {
   produtosDivs[0].classList.add('central');
 }
 
-// ----- FUNÇÃO CONFIRMAR PEDIDO (AJUSTADA) -----
 document.getElementById('confirmarBtn').addEventListener('click', function() {
   if (Object.values(carrinho).every(q => q === 0)) {
     alert("Carrinho vazio!");
@@ -232,6 +231,8 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   }
 
   const divCarrinho = document.getElementById('itensCarrinho');
+
+  // Mantém os itens no carrinho e mostra mensagem de aguardando pagamento
   divCarrinho.innerHTML = "⏳ Aguardando pagamento na maquininha...";
 
   // Monta pedido completo
@@ -252,8 +253,9 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
     items: items
   };
 
-  const ipESP32A = "192.168.5.59"; // <-- coloque o IP real do seu ESP32 A
+  const ipESP32A = "192.168.5.59"; // Coloque aqui o IP real do seu ESP32 A
 
+  // Envia pedido para o ESP32 A
   fetch(`http://${ipESP32A}/pedido`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -262,14 +264,18 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   .then(resp => resp.text())
   .then(data => {
     console.log("Resposta do ESP32 A:", data);
+
+    // Atualiza status sem apagar carrinho
     divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto...";
-    // NÃO limpa carrinho ainda, mantém visualização até confirmar no ESP32 B
+
+    // Se quiser, aqui você pode permitir limpar manualmente ao clicar "Cancelar Pedido"
   })
   .catch(err => {
     console.error("Erro ao enviar pedido:", err);
     divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
   });
 });
+
 
 mostrarProdutos();
 </script>
