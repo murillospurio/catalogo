@@ -20,15 +20,16 @@
     margin-top: 20px;
   }
 
-  #produtos {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    padding: 50px 0;
-    gap: 20px;
-    justify-content: center;
-    scrollbar-width: none;
-  }
+#produtos {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 50px 50px; /* <-- padding maior nas laterais */
+  gap: 20px;
+  justify-content: flex-start; /* manter flex-start para scroll */
+  scrollbar-width: none;
+}
+
   #produtos::-webkit-scrollbar { display: none; }
 
   .produto {
@@ -253,7 +254,7 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
     items: items
   };
 
-  const ipESP32A = "192.168.5.59"; // Coloque o IP real do ESP32 A
+  const ipESP32A = "192.168.5.57"; // Coloque o IP real do ESP32 A
 
   fetch(`http://${ipESP32A}/pedido`, {
     method: "POST",
