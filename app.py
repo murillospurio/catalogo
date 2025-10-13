@@ -119,6 +119,43 @@ def receber_pedido():
         print("Erro geral:", e)
         return jsonify({"erro": str(e)}), 500
 
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    try:
+        data = request.get_json() or {}
+        print("📩 Webhook recebido do Mercado Pago:", data)
+
+        payment_id = None
+        # Alguns webhooks vêm com o ID no query param, outros no JSON
+        if 'id' in request.args:
+            payment_id = request.args.get('id')
+        elif 'data' in data and 'id' in data['data']:
+            payment_id = data['data']['id']
+
+        if not payment_id:
+            print("⚠️ Nenhum ID de pagamento encontrado no webhook.")
+            return jsonify({"status": "ignored"}), 200
+
+        # Consultar status do pagamento diretamente na API do Mercado Pago
+        url = f"https://api.mercadopago.com/v1/payments/{payment_id}"
+        headers = {"Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}"}
+        resp = requests.get(url, headers=headers)
+        info = resp.json()
+
+        status = info.get("status")
+        print(f"💳 Pagamento {payment_id} com status: {status}")
+
+        # Se aprovado, adiciona na lista de pedidos para o ESP32
+        if status == "approved":
+            pedidos_aprovados.append(info)
+            print("✅ Pagamento aprovado e adicionado para o ESP32!")
+
+        return jsonify({"status": "received"}), 200
+
+    except Exception as e:
+        print("❌ Erro no webhook:", e)
+        return jsonify({"error": str(e)}), 500
+
 # === ROTA: ESP32 CONSULTAR PEDIDOS NÃO LIBERADOS ===
 @app.route('/esp_pedido', methods=['GET'])
 def esp_pedido():
