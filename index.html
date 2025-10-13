@@ -183,41 +183,52 @@ function fecharOverlay(){
 
 // ----- CONFIRMAR PEDIDO NO OVERLAY -----
 document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
-  overlayItens.innerHTML = "✅ Aperte o botão verde da máquina para continuar. Obrigada!";
+  overlayItens.innerHTML = "⏳ Aperte o botão verde para continuar, obrigada!";
   const items = [];
   let total = 0;
   for (let id in carrinho) {
     const qtd = carrinho[id];
     if (qtd > 0) {
       const p = produtos.find(prod => prod.id == id);
-      items.push({ name: p.nome.toLowerCase().replace(/\s/g,"_"), qty: qtd });
+      items.push({ name: p.nome.toLowerCase().replace(/\s/g, "_"), qty: qtd });
       total += p.preco * qtd;
     }
   }
 
-  const pedido={order_id:"PED-"+Date.now(), total:total, items:items};
+  const pedido = { order_id: "PED-" + Date.now(), total: total, items: items };
 
-fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
+  fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pedido)
   })
   .then(async resp => {
     let data;
-    try { data = await resp.json(); } catch(e) { data = {status:"ok"}; }
+    try { data = await resp.json(); } catch (e) { data = { status: "ok" }; }
+
     if (resp.ok) {
       setTimeout(() => {
-        fecharOverlay();
-        cancelarPedido();
-      }, 10000); // Fecha overlay após 10 segundos mostrando a mensagem
+        overlayItens.innerHTML = "✅ Aperte o botão verde da máquina para continuar.";
+        setTimeout(() => {
+          fecharOverlay();
+          cancelarPedido();
+        }, 3000);
+      }, 1000);
     } else {
-      overlayItens.innerHTML = "❌ Erro ao enviar pedido!";
+      // Mostra status e resposta do servidor
+      const texto = await resp.text();
+      overlayItens.innerHTML = `❌ Erro ao enviar pedido! Status: ${resp.status}`;
+      console.error("Erro do servidor:", texto);
     }
   })
-  .catch(err => { overlayItens.innerHTML = "❌ Erro ao enviar pedido!"; });
+  .catch(err => {
+    overlayItens.innerHTML = "❌ Erro ao enviar pedido! Verifique console.";
+    console.error("Erro no fetch:", err);
+  });
 
   resetTimerLimpeza();
 });
+
 
 // Timer de limpeza
 function resetTimerLimpeza(){
