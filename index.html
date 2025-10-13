@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <title>Convêniencia Machine</title>
 <style>
-body { font-family: Arial; margin:0; padding:0; background: url('fundo.png') no-repeat center center fixed; background-size: cover; overflow-x: hidden; transition: opacity 0.5s; }
+body { font-family: Arial; margin:0; padding:0; background: url('fundo.png') no-repeat center center fixed; background-size: cover; overflow-x: hidden; }
 h1 { text-align:center; color:#fff; text-shadow:1px 1px 5px rgba(0,0,0,0.7); margin-top:20px; }
-#produtos { display:flex; overflow-x:auto; scroll-snap-type: x mandatory; padding:50px; gap:20px; justify-content:flex-start; scrollbar-width:none; transition: opacity 0.5s; }
+#produtos { display:flex; overflow-x:auto; scroll-snap-type: x mandatory; padding:50px; gap:20px; justify-content:flex-start; scrollbar-width:none; }
 #produtos::-webkit-scrollbar { display:none; }
 .produto { flex:0 0 250px; height:380px; scroll-snap-align:center; border-radius:15px; background:rgba(255,255,255,0.9); box-shadow:0 6px 10px rgba(0,0,0,0.3); display:flex; flex-direction:column; align-items:center; justify-content:space-between; transition: transform 0.3s, opacity 0.3s; padding:15px; box-sizing:border-box; }
 .produto img { width:auto; height:400px; object-fit:contain; }
@@ -39,9 +39,6 @@ h1 { text-align:center; color:#fff; text-shadow:1px 1px 5px rgba(0,0,0,0.7); mar
 #overlay div { margin-bottom:15px; font-size:20px; }
 #overlay button { margin:10px; padding:14px 28px; font-size:20px; border-radius:10px; cursor:pointer; background-color:#007bff; border:none; color:#fff; transition: background 0.3s; }
 #overlay button:hover { background-color:#0056b3; }
-
-.fade-out { opacity:0.2; transition: opacity 0.5s; }
-.fade-in { opacity:1; transition: opacity 0.5s; }
 </style>
 </head>
 <body>
@@ -77,7 +74,6 @@ const produtos = [
 
 let carrinho = {};
 let timerLimpeza = null;
-let overlayTimer = null;
 
 // Mostrar produtos
 function mostrarProdutos() {
@@ -155,6 +151,7 @@ function destacarCentral() {
 // ----- OVERLAY -----
 const overlay=document.getElementById('overlay');
 const overlayItens=document.getElementById('overlayItens');
+let overlayTimer = null; // Timer para fechar overlay automaticamente
 
 document.getElementById('verPedidoBtn').addEventListener('click',()=>{
   overlayItens.innerHTML='';
@@ -169,22 +166,19 @@ document.getElementById('verPedidoBtn').addEventListener('click',()=>{
   }
   if(vazio) overlayItens.innerHTML='Carrinho vazio!';
   else overlayItens.innerHTML += `<br><b>Total: R$ ${total.toFixed(2)}</b>`;
-
-  // Fade out do catálogo
-  document.getElementById('produtos').classList.add('fade-out');
-
+  
   overlay.classList.add('show');
 
-  // Fechar automaticamente após 10s se cliente não clicar
+  // Fecha automaticamente após 10 segundos
   if(overlayTimer) clearTimeout(overlayTimer);
-  overlayTimer=setTimeout(()=>{
+  overlayTimer = setTimeout(()=>{
     fecharOverlay();
-  },10000);
+  },10000); // 10 segundos
 });
 
 function fecharOverlay(){
   overlay.classList.remove('show');
-  document.getElementById('produtos').classList.remove('fade-out');
+  if(overlayTimer) { clearTimeout(overlayTimer); overlayTimer = null; }
 }
 
 // ----- CONFIRMAR PEDIDO NO OVERLAY -----
