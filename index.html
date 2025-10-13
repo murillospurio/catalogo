@@ -21,10 +21,24 @@ h1 { text-align:center; color:#fff; text-shadow:1px 1px 5px rgba(0,0,0,0.7); mar
 .carrinho button { padding:12px 24px; font-size:18px; border-radius:8px; margin-top:5px; }
 
 /* Overlay */
-#overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); color:#fff; z-index:9999; text-align:center; padding-top:50px; box-sizing:border-box; }
-#overlay h2 { margin-bottom:20px; }
-#overlay div { margin-bottom:10px; }
-#overlay button { margin:10px; padding:12px 24px; font-size:18px; }
+#overlay {
+  display:none; 
+  position:fixed; 
+  top:0; left:0; width:100%; height:100%; 
+  background:rgba(0,0,0,0.95); 
+  color:#fff; 
+  z-index:9999; 
+  text-align:center; 
+  padding-top:50px; 
+  box-sizing:border-box; 
+  opacity:0; 
+  transition: opacity 0.5s;
+}
+#overlay.show { display:block; opacity:1; }
+#overlay h2 { margin-bottom:20px; font-size:28px; }
+#overlay div { margin-bottom:15px; font-size:20px; }
+#overlay button { margin:10px; padding:14px 28px; font-size:20px; border-radius:10px; cursor:pointer; background-color:#007bff; border:none; color:#fff; transition: background 0.3s; }
+#overlay button:hover { background-color:#0056b3; }
 </style>
 </head>
 <body>
@@ -64,11 +78,11 @@ let timerLimpeza = null;
 // Mostrar produtos
 function mostrarProdutos() {
   const div = document.getElementById('produtos');
-  div.innerHTML = '';
-  produtos.forEach(p => {
-    const prodDiv = document.createElement('div');
-    prodDiv.className = 'produto';
-    prodDiv.innerHTML = `
+  div.innerHTML='';
+  produtos.forEach(p=>{
+    const prodDiv=document.createElement('div');
+    prodDiv.className='produto';
+    prodDiv.innerHTML=`
       <img src="${p.img}" alt="${p.nome}">
       <div><b>${p.nome}</b><br>R$ ${p.preco.toFixed(2)}<br>Estoque: ${p.estoque}</div>
       <div>
@@ -83,9 +97,9 @@ function mostrarProdutos() {
 
 // Alterar quantidade
 function alterarQuantidade(id, delta) {
-  if (!carrinho[id]) carrinho[id]=0;
-  const produto = produtos.find(p=>p.id===id);
-  let novaQtd = carrinho[id]+delta;
+  if(!carrinho[id]) carrinho[id]=0;
+  const produto=produtos.find(p=>p.id===id);
+  let novaQtd=carrinho[id]+delta;
   if(novaQtd<0) novaQtd=0;
   if(novaQtd>produto.estoque) novaQtd=produto.estoque;
   carrinho[id]=novaQtd;
@@ -96,13 +110,13 @@ function alterarQuantidade(id, delta) {
 
 // Atualiza carrinho
 function atualizarCarrinho() {
-  const div = document.getElementById('itensCarrinho');
+  const div=document.getElementById('itensCarrinho');
   div.innerHTML='';
   let total=0; let vazio=true;
-  for(let id in carrinho) {
-    if(carrinho[id]>0) {
+  for(let id in carrinho){
+    if(carrinho[id]>0){
       vazio=false;
-      const p = produtos.find(prod=>prod.id==id);
+      const p=produtos.find(prod=>prod.id==id);
       total+=p.preco*carrinho[id];
       div.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco*carrinho[id]).toFixed(2)}<br>`;
     }
@@ -112,7 +126,7 @@ function atualizarCarrinho() {
 }
 
 // Cancelar pedido
-function cancelarPedido() {
+function cancelarPedido(){
   carrinho={};
   mostrarProdutos();
   atualizarCarrinho();
@@ -135,8 +149,8 @@ function destacarCentral() {
 }
 
 // ----- OVERLAY -----
-const overlay = document.getElementById('overlay');
-const overlayItens = document.getElementById('overlayItens');
+const overlay=document.getElementById('overlay');
+const overlayItens=document.getElementById('overlayItens');
 
 document.getElementById('verPedidoBtn').addEventListener('click',()=>{
   overlayItens.innerHTML='';
@@ -151,15 +165,14 @@ document.getElementById('verPedidoBtn').addEventListener('click',()=>{
   }
   if(vazio) overlayItens.innerHTML='Carrinho vazio!';
   else overlayItens.innerHTML += `<br><b>Total: R$ ${total.toFixed(2)}</b>`;
-  overlay.style.display='block';
+  overlay.classList.add('show');
 });
 
-function fecharOverlay(){ overlay.style.display='none'; }
+function fecharOverlay(){ overlay.classList.remove('show'); }
 
 // ----- CONFIRMAR PEDIDO NO OVERLAY -----
 document.getElementById('overlayConfirmarBtn').addEventListener('click',()=>{
   overlayItens.innerHTML="⏳ Aguarde...";
-
   const items=[]; let total=0;
   for(let id in carrinho){
     const qtd=carrinho[id];
