@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Convêniencia Machine</title>
 <style>
   body {
     font-family: Arial;
@@ -128,8 +133,12 @@
   <img src="carrinho.png" alt="Carrinho">
   <div id="itensCarrinho">Vazio</div>
   <div>Total: R$ <span id="total">0.00</span></div>
-  <button id="confirmarBtn">Confirmar Pedido</button>
+  <button id="verPedidoBtn">Ver Pedido</button>
   <button onclick="cancelarPedido()">Cancelar Pedido</button>
+  <div id="confirmacaoContainer" style="display:none; margin-top:10px;">
+    <button id="confirmarBtn">Confirmar Pedido</button>
+    <button onclick="cancelarVisualizacao()">Cancelar</button>
+  </div>
 </div>
 
 <script>
@@ -229,6 +238,17 @@ function destacarCentral() {
   produtosDivs[0].classList.add('central');
 }
 
+// ----- VISUALIZAÇÃO DO PEDIDO -----
+document.getElementById('verPedidoBtn').addEventListener('click', function() {
+  atualizarCarrinho();
+  document.getElementById('confirmacaoContainer').style.display = 'block';
+});
+
+// Cancelar visualização
+function cancelarVisualizacao() {
+  document.getElementById('confirmacaoContainer').style.display = 'none';
+}
+
 // ----- CONFIRMAR PEDIDO -----
 document.getElementById('confirmarBtn').addEventListener('click', function() {
   if (Object.values(carrinho).every(q => q === 0)) {
@@ -237,7 +257,7 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   }
 
   const divCarrinho = document.getElementById('itensCarrinho');
-  divCarrinho.innerHTML = "⏳ Aperte botão verde da maquina para continuar";
+  divCarrinho.innerHTML = "⏳ Aguarde...";
 
   const items = [];
   let total = 0;
@@ -256,7 +276,7 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
     items: items
   };
 
-  // Envia para Flask / servidor externo com tratamento seguro de JSON
+  // Envia para Flask / servidor externo
   fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -264,15 +284,15 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   })
   .then(async resp => {
     let data;
-    try {
-      data = await resp.json();
-    } catch(e) {
-      data = { status: "ok" };
-    }
+    try { data = await resp.json(); } 
+    catch(e) { data = { status: "ok" }; }
 
     if (resp.ok) {
       console.log("Pedido enviado:", data);
-      divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto. Obrigada..";
+      // Mostra mensagem final após 2s
+      setTimeout(() => {
+        divCarrinho.innerHTML = "✅ Pedido enviado! Aperte botão verde da máquina para continuar.";
+      }, 2000);
     } else {
       console.error("Erro ao enviar pedido:", data);
       divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
