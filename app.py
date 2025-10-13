@@ -17,39 +17,64 @@ ESP32_URL = "http://192.168.5.57/liberar"  # IP e rota do seu ESP32 (não usado 
 pedidos_aprovados = []
 
 # === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA POS ===
-def criar_pagamento_maquininha(amount, payment_type="credit_card", descricao="Pedido"):
-    url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
-
-    headers = {
-        "Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}",
-        "Content-Type": "application/json"
-    }
-
-    # Ajuste para Point Pro 2 (POS Cloud)
-    payload = {
-        "amount": float(amount),
-        "description": descricao,
-        "payment": {
-            "type": payment_type
-        }
-    }
-
+# === ROTA: RECEBER PEDIDO DO CATÁLOGO ===
+@app.route("/pedido", methods=["POST"])
+def receber_pedido():
     try:
-        response = requests.post(url, headers=headers, json=payload)
-        response_data = response.json()
+        data = request.get_json()
+        print("📦 Dados recebidos:", data)
 
-        if response.status_code == 201:
-            print("Pagamento criado com sucesso!")
-            print(json.dumps(response_data, indent=2))
-            return response_data
-        else:
-            print(f"Erro ao criar pagamento: {response.status_code}")
-            print(json.dumps(response_data, indent=2))
-            return None
+        itens = data.get("items", [])
+        total = data.get("total", 0)
+        order_id = data.get("order_id")
 
-    except requests.exceptions.RequestException as e:
-        print("Erro de requisição:", e)
-        return None
+        if not total or not itens:
+            return jsonify({"erro": "Pedido inválido"}), 400
+
+        # Cria descrição do pedido
+        descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
+        print(f"🛒 Pedido recebido: {descricao} | Total R$ {total}")
+
+        # === Envia cobrança para maquininha ===
+        pagamento = criar_pagamento_maquininha(total, "credit_card", descricao)
+        if not pagamento or "id" not in pagamento:
+            return jsonify({"erro": "Falha ao criar cobrança"}), 500
+
+        payment_id = pagamento["id"]
+        print("💳 Pagamento criado, ID:", payment_id)
+
+        # === Espera aprovação do pagamento (até 2 minutos) ===
+        for i in range(12):
+            status = verificar_pagamento(payment_id)
+            print(f"Tentativa {i+1}: status = {status}")
+
+            if status == "approved":
+                print("✅ Pagamento aprovado!")
+
+                # Adiciona à fila de pedidos para ESP32
+                payload_esp = [{"id": idx + 1, "quantidade": item["qty"]} for idx, item in enumerate(itens)]
+                pedidos_aprovados.append({
+                    "order_id": order_id,
+                    "pedido": payload_esp,
+                    "total": total,
+                    "liberado": False
+                })
+                print("📡 Pedido adicionado à fila para ESP32")
+
+                return jsonify({"status": "approved"}), 200
+
+            elif status == "rejected":
+                print("❌ Pagamento rejeitado.")
+                return jsonify({"status": "rejected"}), 200
+
+            time.sleep(10)
+
+        print("⏱️ Tempo esgotado, pagamento pendente.")
+        return jsonify({"status": "pending"}), 200
+
+    except Exception as e:
+        print("Erro geral:", e)
+        return jsonify({"erro": str(e)}), 500
 
 
 # === FUNÇÃO: VERIFICAR STATUS DO PAGAMENTO ===
