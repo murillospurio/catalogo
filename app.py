@@ -1,89 +1,64 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # <--- IMPORTANTE para permitir requisições do navegador
-from threading import Timer
 import requests
-import os
+import time
 
 app = Flask(__name__)
-CORS(app)  # <--- Habilita CORS globalmente
 
-# Lista de pedidos pendentes
-pedidos = []
+# ===== CONFIGURAÇÕES =====
+# Número de série da máquina de cartão (único)
+NUMERO_SERIE_MAQUINA = "8701372447323147"
 
-# === CONFIGURAÇÃO MERCADO PAGO ===
-ACCESS_TOKEN = 'APP_USR-3319944673883642-101218-671fe3f886fe928cac84e01bc31bc20a-1433246274'  # Substitua pelo seu token do Mercado Pago
+# IP do ESP32 correspondente a essa máquina
+ESP32_URL = "http://192.168.5.57/dispense"
 
-def criar_pagamento_mercadopago(valor, descricao):
+# ===== FUNÇÃO SIMULADA DE PAGAMENTO =====
+def processa_pagamento_maquininha(valor):
     """
-    Cria um pagamento via API do Mercado Pago (Pix ou cartão)
+    Simula envio do pagamento para a máquina de cartão
+    e retorna True se aprovado.
+    Substitua por integração real com a maquininha se necessário.
     """
-    url = 'https://api.mercadopago.com/v1/payments'
-    headers = {
-        'Authorization': f'Bearer {ACCESS_TOKEN}',
-        'Content-Type': 'application/json'
-    }
-    data = {
-        "transaction_amount": float(valor),
-        "description": descricao,
-        "payment_method_id": "pix",  # Pode trocar para "credit_card" se quiser cartão
-        "payer": {
-            "email": "cliente@exemplo.com"  # Pode ser qualquer email
-        }
-    }
-    r = requests.post(url, json=data, headers=headers)
-    return r.json()
+    print(f"Enviando pagamento de {valor} para a máquina {NUMERO_SERIE_MAQUINA}...")
+    time.sleep(1)  # simula tempo de processamento
+    print("Pagamento aprovado pela máquina!")
+    return True  # sempre aprova para teste
 
-# Função para remover pedido após 10 segundos
-def remover_pedido(pedido_id):
-    global pedidos
-    pedidos = [p for p in pedidos if p['order_id'] != pedido_id]
-
-# Rota para receber pedido do ESP32 ou navegador
-@app.route('/pedido', methods=['POST'])
-def receber_pedido():
-    global pedidos
-    pedido = request.json
-    if not pedido:
+# ===== ROTA PARA RECEBER PEDIDO DO CATÁLOGO =====
+@app.route("/criar_pedido", methods=["POST"])
+def criar_pedido():
+    data = request.get_json()
+    if not data or "items" not in data:
         return jsonify({"error": "JSON inválido"}), 400
 
-    pedido['status'] = 'pending'
-    pedidos.append(pedido)
+    # Calcula o total do pedido
+    total = sum(item["qty"] * item.get("price", 0) for item in data["items"])
+    print(f"Total do pedido: {total}")
 
-    # Timer para remover pedido após 10 segundos
-    t = Timer(10, remover_pedido, args=[pedido['order_id']])
-    t.start()
+    # Processa pagamento via maquininha
+    aprovado = processa_pagamento_maquininha(total)
 
-    return jsonify({"status": "pedido recebido"}), 200
+    if aprovado:
+        # Pedido aprovado → envia para o ESP32
+        pedido = {
+            "status": "paid",
+            "items": data["items"]
+        }
 
-# Rota para ESP32 consultar pedido pendente
-@app.route('/getPedido', methods=['GET'])
-def get_pedido():
-    global pedidos
-    for pedido in pedidos:
-        if pedido['status'] == 'pending':
-            pedido['status'] = 'read'
-            return jsonify(pedido), 200
-    # Retornar um JSON vazio com status 200
-    return jsonify({"status": "none"}), 200
+        try:
+            resp = requests.post(ESP32_URL, json=pedido, timeout=5)
+            if resp.status_code == 200:
+                print("✅ Pedido enviado para o ESP32 com sucesso!")
+                return jsonify({"status": "pedido aprovado e enviado para ESP32"}), 200
+            else:
+                print("❌ Falha ao enviar pedido para ESP32")
+                return jsonify({"error": "Falha ao enviar pedido para ESP32"}), 500
+        except requests.exceptions.RequestException as e:
+            print("❌ Erro na requisição para ESP32:", e)
+            return jsonify({"error": str(e)}), 500
+    else:
+        print("❌ Pagamento não aprovado")
+        return jsonify({"status": "pagamento não aprovado"}), 400
 
-# Rota para gerar pagamento direto (Pix ou cartão) via Mercado Pago
-@app.route('/gerarPagamento', methods=['POST'])
-def gerar_pagamento():
-    data = request.json
-    valor = data.get('valor')
-    descricao = data.get('descricao', 'Pedido ESP32')
-
-    if not valor:
-        return jsonify({"error": "Valor é obrigatório"}), 400
-
-    pagamento = criar_pagamento_mercadopago(valor, descricao)
-    return jsonify(pagamento), 200
-
-# Rota de teste
-@app.route('/', methods=['GET'])
-def home():
-    return "Servidor Flask online e pronto!", 200
-
+# ===== RODAR APP =====
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000)
