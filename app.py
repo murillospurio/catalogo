@@ -25,7 +25,6 @@ def criar_pagamento_maquininha(amount, descricao="Pedido"):
         "Content-Type": "application/json"
     }
 
-    # Ajuste para Point Pro 2 (POS Cloud)
     payload = {
         "amount": float(amount),
         "description": descricao
@@ -71,14 +70,10 @@ def receber_pedido():
         if not total or not itens:
             return jsonify({"erro": "Pedido inválido"}), 400
 
-        # Cria descrição do pedido
         descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
         print(f"🛒 Pedido recebido: {descricao} | Total R$ {total}")
 
-        # === Converte valor para centavos ===
         amount_cents = int(total * 100)
-
-        # === Envia cobrança para maquininha ===
         pagamento = criar_pagamento_maquininha(amount_cents, descricao)
         if not pagamento or "id" not in pagamento:
             return jsonify({"erro": "Falha ao criar cobrança"}), 500
@@ -86,7 +81,6 @@ def receber_pedido():
         payment_id = pagamento["id"]
         print("💳 Pagamento criado, ID:", payment_id)
 
-        # === Espera aprovação do pagamento (até 2 minutos) ===
         for i in range(12):
             status = verificar_pagamento(payment_id)
             print(f"Tentativa {i+1}: status = {status}")
@@ -94,7 +88,6 @@ def receber_pedido():
             if status == "approved":
                 print("✅ Pagamento aprovado!")
 
-                # Adiciona à fila de pedidos para ESP32
                 payload_esp = [{"id": idx + 1, "quantidade": item["qty"]} for idx, item in enumerate(itens)]
                 pedidos_aprovados.append({
                     "order_id": order_id,
@@ -119,42 +112,52 @@ def receber_pedido():
         print("Erro geral:", e)
         return jsonify({"erro": str(e)}), 500
 
-@app.route('/webhook', methods=['POST'])
+
+# === ROTA: WEBHOOK (para notificações automáticas do Mercado Pago) ===
+@app.route('/webhook', methods=['POST', 'GET'])
 def webhook():
     try:
-        data = request.get_json() or {}
-        print("📩 Webhook recebido do Mercado Pago:", data)
+        print("\n📩 Requisição recebida no /webhook")
+        print("Headers:", dict(request.headers))
+        print("Args:", request.args)
+        
+        data = {}
+        try:
+            data = request.get_json(force=True) or {}
+        except Exception:
+            pass
 
-        payment_id = None
-        # Alguns webhooks vêm com o ID no query param, outros no JSON
-        if 'id' in request.args:
-            payment_id = request.args.get('id')
-        elif 'data' in data and 'id' in data['data']:
-            payment_id = data['data']['id']
+        print("Body:", data)
 
+        # Tenta extrair o payment_id
+        payment_id = request.args.get("id") or data.get("id") or data.get("data", {}).get("id")
         if not payment_id:
-            print("⚠️ Nenhum ID de pagamento encontrado no webhook.")
+            print("⚠️ Nenhum ID de pagamento encontrado.")
             return jsonify({"status": "ignored"}), 200
 
-        # Consultar status do pagamento diretamente na API do Mercado Pago
+        print(f"🔎 Consultando pagamento {payment_id}...")
+
         url = f"https://api.mercadopago.com/v1/payments/{payment_id}"
         headers = {"Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}"}
         resp = requests.get(url, headers=headers)
         info = resp.json()
-
         status = info.get("status")
-        print(f"💳 Pagamento {payment_id} com status: {status}")
+        print(f"💳 Status do pagamento {payment_id}: {status}")
 
-        # Se aprovado, adiciona na lista de pedidos para o ESP32
         if status == "approved":
-            pedidos_aprovados.append(info)
-            print("✅ Pagamento aprovado e adicionado para o ESP32!")
+            # Evita duplicar o mesmo pedido
+            if payment_id not in [p.get("id") for p in pedidos_aprovados]:
+                pedidos_aprovados.append(info)
+                print("✅ Pagamento aprovado e adicionado à fila do ESP32.")
+            else:
+                print("⚠️ Pagamento já existente na fila, ignorando duplicata.")
 
         return jsonify({"status": "received"}), 200
 
     except Exception as e:
         print("❌ Erro no webhook:", e)
         return jsonify({"error": str(e)}), 500
+
 
 # === ROTA: ESP32 CONSULTAR PEDIDOS NÃO LIBERADOS ===
 @app.route('/esp_pedido', methods=['GET'])
@@ -164,12 +167,13 @@ def esp_pedido():
     print("Pedidos aprovados:", pedidos_aprovados)
 
     if pedidos_aprovados:
-        pedido = pedidos_aprovados.pop(0)  # Pega o primeiro pedido
+        pedido = pedidos_aprovados.pop(0)
         print("➡️ Enviando pedido ao ESP:", pedido)
         return jsonify(pedido)
     else:
         print("⚠️ Nenhum pedido aprovado disponível")
         return jsonify({"status": "vazio"})
+
 
 # === ROTA: ESP32 MARCAR PEDIDO COMO LIBERADO ===
 @app.route("/pedido_liberado", methods=["POST"])
@@ -177,16 +181,18 @@ def pedido_liberado():
     data = request.get_json()
     order_id = data.get("order_id")
     for p in pedidos_aprovados:
-        if p["order_id"] == order_id:
+        if p.get("order_id") == order_id:
             p["liberado"] = True
             print(f"✅ Pedido {order_id} marcado como liberado pelo ESP32")
             return jsonify({"status": "ok"}), 200
     return jsonify({"erro": "pedido não encontrado"}), 404
 
+
 # === ROTA: HOME ===
 @app.route("/", methods=["GET"])
 def home():
     return "API Flask conectada à maquininha + ESP32", 200
+
 
 # === RODAR APP ===
 if __name__ == "__main__":
