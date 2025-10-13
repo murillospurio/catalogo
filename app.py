@@ -49,13 +49,16 @@ def verificar_pagamento(payment_id):
 def receber_pedido():
     try:
         data = request.get_json()
-        itens = data.get("itens", [])
-        total = data.get("total")
+        print("📦 Dados recebidos:", data)
 
-        if not total:
-            return jsonify({"erro": "Valor total ausente"}), 400
+        itens = data.get("items", [])  # ← aceita o nome correto
+        total = data.get("total", 0)
 
-        descricao = ", ".join([f"{i['nome']} x{i['quantidade']}" for i in itens])
+        if not total or not itens:
+            return jsonify({"erro": "Pedido inválido"}), 400
+
+        # Cria a descrição a partir do formato enviado
+        descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
         print(f"🛒 Pedido recebido: {descricao} | Total R$ {total}")
 
         # === Envia cobrança para maquininha ===
@@ -66,16 +69,20 @@ def receber_pedido():
         payment_id = pagamento["id"]
         print("💳 Pagamento criado, ID:", payment_id)
 
-        # === Espera aprovação do pagamento ===
-        for i in range(12):  # 2 minutos (12 tentativas de 10s)
+        # === Espera aprovação ===
+        for i in range(12):
             status = verificar_pagamento(payment_id)
             print(f"Tentativa {i+1}: status = {status}")
 
             if status == "approved":
                 print("✅ Pagamento aprovado!")
 
-                # === Envia itens para o ESP32 liberar ===
-                payload_esp = {"itens": itens, "total": total}
+                # Prepara os dados exatamente no formato que o ESP entenderá
+                payload_esp = {
+                    "pedido": [{"id": idx + 1, "quantidade": i["qty"]} for idx, i in enumerate(itens)],
+                    "total": total
+                }
+
                 try:
                     resp = requests.post(ESP32_URL, json=payload_esp, timeout=5)
                     print("📡 Enviado ao ESP32:", resp.text)
@@ -96,6 +103,7 @@ def receber_pedido():
     except Exception as e:
         print("Erro geral:", e)
         return jsonify({"erro": str(e)}), 500
+
 
 
 @app.route("/", methods=["GET"])
