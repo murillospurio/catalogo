@@ -10,13 +10,13 @@ CORS(app)
 
 # === CONFIGURAÇÕES ===
 MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-3319944673883642-101218-671fe3f886fe928cac84e01bc31bc20a-1433246274"
-POS_EXTERNAL_ID = "GERTEC_MP35P__8701372447323147"  
-ESP32_URL = "http://192.168.5.57/liberar"  # IP e rota do seu ESP32 (não usado no pull do ESP)
+POS_EXTERNAL_ID = "GERTEC_MP35P__8701372447323147"  # Device ID correto
+ESP32_URL = "http://192.168.5.57/liberar"  # IP e rota do seu ESP32
 
 # === FILA DE PEDIDOS APROVADOS ===
 pedidos_aprovados = []
 
-# === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA POS (Point Pro 2) ===
+# === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA POS ===
 def criar_pagamento_maquininha(amount, payment_type="credit_card", descricao="Pedido"):
     url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
 
@@ -25,8 +25,9 @@ def criar_pagamento_maquininha(amount, payment_type="credit_card", descricao="Pe
         "Content-Type": "application/json"
     }
 
+    # Ajuste para Point Pro 2 (POS Cloud)
     payload = {
-        "amount": float(amount),
+        "amount": float(amount),  # Já vem em centavos
         "description": descricao,
         "payment": {
             "type": payment_type
@@ -77,8 +78,11 @@ def receber_pedido():
         descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
         print(f"🛒 Pedido recebido: {descricao} | Total R$ {total}")
 
+        # === Converte valor para centavos ===
+        amount_cents = int(total * 100)
+
         # === Envia cobrança para maquininha ===
-        pagamento = criar_pagamento_maquininha(total, "credit_card", descricao)
+        pagamento = criar_pagamento_maquininha(amount_cents, "credit_card", descricao)
         if not pagamento or "id" not in pagamento:
             return jsonify({"erro": "Falha ao criar cobrança"}), 500
 
