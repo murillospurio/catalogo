@@ -26,13 +26,11 @@ def criar_pagamento_maquininha(amount, payment_type="credit_card", descricao="Pe
     }
 
     # Ajuste para Point Pro 2 (POS Cloud)
-    payload = {
-        "amount": float(amount),  # Já vem em centavos
-        "description": descricao,
-        "payment": {
-            "type": payment_type
-        }
-    }
+   payload = {
+    "amount": float(amount_cents),
+    "description": descricao
+}
+
 
     try:
         response = requests.post(url, headers=headers, json=payload)
