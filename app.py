@@ -3,6 +3,7 @@ from flask_cors import CORS
 import requests
 import time
 import os
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -15,27 +16,42 @@ ESP32_URL = "http://192.168.5.57/liberar"  # IP e rota do seu ESP32 (não usado 
 # === FILA DE PEDIDOS APROVADOS ===
 pedidos_aprovados = []
 
-# === Criar pagamento direto para a maquininha ===
-def criar_pagamento_maquininha(valor_total, descricao):
-    url = "https://api.mercadopago.com/point/integrations/transactions"
+def criar_pagamento_maquininha(amount, external_pos_id, payment_type="credit_card"):
+    """
+    Cria uma transação no POS do Mercado Pago.
+    amount: float, valor da cobrança
+    external_pos_id: str, identificador da maquininha
+    payment_type: 'credit_card' ou 'debit_card'
+    """
+    url = "https://api.mercadopago.com/v1/point/transactions"
+
     headers = {
         "Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
 
-    data = {
-        "external_pos_id": POS_EXTERNAL_ID,
-        "description": descricao,
-        "payment": {
-            "amount": valor_total,
-            "type": "credit_card"  # Pode ser "credit_card" ou "debit_card"
-        }
+    payload = {
+        "transaction_amount": float(amount),  # deve ser número decimal
+        "external_pos_id": external_pos_id,  # identificador da maquininha
+        "payment_type": payment_type
     }
 
-    response = requests.post(url, headers=headers, json=data)
-    print("🔸 Enviando cobrança para maquininha:", response.text)
-    return response.json() if response.ok else None
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        response_data = response.json()
 
+        if response.status_code == 201:
+            print("Pagamento criado com sucesso!")
+            print(json.dumps(response_data, indent=2))
+            return response_data
+        else:
+            print(f"Erro ao criar pagamento: {response.status_code}")
+            print(json.dumps(response_data, indent=2))
+            return None
+
+    except requests.exceptions.RequestException as e:
+        print("Erro de requisição:", e)
+        return None
 # === Consultar status do pagamento ===
 def verificar_pagamento(payment_id):
     url = f"https://api.mercadopago.com/v1/payments/{payment_id}"
