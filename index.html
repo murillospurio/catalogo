@@ -255,7 +255,7 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   };
 
   // --- ALTERAÇÃO: envia para Flask / servidor externo ---
-  fetch('https://futuro.herokuapp.com/pedido', {
+  fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pedido)
