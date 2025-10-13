@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # <--- IMPORTANTE para permitir requisições do navegador
 from threading import Timer
 import requests
 import os
 
 app = Flask(__name__)
+CORS(app)  # <--- Habilita CORS globalmente
 
 # Lista de pedidos pendentes
 pedidos = []
@@ -36,7 +38,7 @@ def remover_pedido(pedido_id):
     global pedidos
     pedidos = [p for p in pedidos if p['order_id'] != pedido_id]
 
-# Rota para receber pedido do ESP32
+# Rota para receber pedido do ESP32 ou navegador
 @app.route('/pedido', methods=['POST'])
 def receber_pedido():
     global pedidos
