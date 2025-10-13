@@ -60,8 +60,9 @@ def get_pedido():
     for pedido in pedidos:
         if pedido['status'] == 'pending':
             pedido['status'] = 'read'
-            return jsonify(pedido)
-    return jsonify({}), 204
+            return jsonify(pedido), 200
+    # Retornar um JSON vazio com status 200
+    return jsonify({"status": "none"}), 200
 
 # Rota para gerar pagamento direto (Pix ou cartão) via Mercado Pago
 @app.route('/gerarPagamento', methods=['POST'])
