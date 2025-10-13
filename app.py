@@ -18,7 +18,7 @@ pedidos_aprovados = []
 
 # === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA POS ===
 def criar_pagamento_maquininha(amount, external_pos_id, payment_type="credit_card", descricao="Pedido"):
-    url = "https://api.mercadopago.com/v1/point/transactions"
+    url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
 
     headers = {
         "Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}",
