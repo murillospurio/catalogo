@@ -4,119 +4,27 @@
 <meta charset="UTF-8">
 <title>Convêniencia Machine</title>
 <style>
-body {
-  font-family: Arial;
-  margin: 0;
-  padding: 0;
-  background: url('fundo.png') no-repeat center center fixed;
-  background-size: cover;
-  overflow-x: hidden;
-}
-
-h1 {
-  text-align: center;
-  color: #fff;
-  text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
-  margin-top: 20px;
-}
-
-#produtos {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 50px 50px;
-  gap: 20px;
-  justify-content: flex-start;
-  scrollbar-width: none;
-}
-
-#produtos::-webkit-scrollbar { display: none; }
-
-.produto {
-  flex: 0 0 250px;
-  height: 380px;
-  scroll-snap-align: center;
-  border-radius: 15px;
-  background: rgba(255,255,255,0.9);
-  box-shadow: 0 6px 10px rgba(0,0,0,0.3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  transition: transform 0.3s, opacity 0.3s;
-  padding: 15px;
-  box-sizing: border-box;
-}
-
-.produto img {
-  width: auto;
-  height: 400px;
-  object-fit: contain;
-}
-
-.produto div { font-size: 18px; }
-
-.produto button {
-  padding: 8px 16px;
-  margin: 4px;
-  cursor: pointer;
-  border: none;
-  border-radius: 5px;
-  background-color: #007bff;
-  color: #fff;
-  font-size: 16px;
-}
-
-.produto button:hover { background-color: #0056b3; }
-
-.produto.central { transform: scale(1.1); opacity: 1; z-index: 10; }
-.produto:not(.central) { transform: scale(0.85); opacity: 0.6; z-index: 1; }
-
-.carrinho {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  border: 2px solid #000;
-  padding: 25px;
-  background: rgba(255,255,255,0.9);
-  border-radius: 15px;
-  width: 540px;
-  height: 540px;
-  text-align: center;
-  z-index: 100;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  font-size: 18px;
-}
-
-.carrinho img {
-  width: 200px;
-  height: 200px;
-  margin: 0 auto 15px auto;
-}
-
-#itensCarrinho { flex-grow: 1; overflow-y: auto; font-size: 16px; margin-bottom: 15px; }
-.carrinho button { padding: 12px 24px; font-size: 18px; border-radius: 8px; margin-top: 5px; }
+body { font-family: Arial; margin:0; padding:0; background: url('fundo.png') no-repeat center center fixed; background-size: cover; overflow-x: hidden; }
+h1 { text-align:center; color:#fff; text-shadow:1px 1px 5px rgba(0,0,0,0.7); margin-top:20px; }
+#produtos { display:flex; overflow-x:auto; scroll-snap-type: x mandatory; padding:50px; gap:20px; justify-content:flex-start; scrollbar-width:none; }
+#produtos::-webkit-scrollbar { display:none; }
+.produto { flex:0 0 250px; height:380px; scroll-snap-align:center; border-radius:15px; background:rgba(255,255,255,0.9); box-shadow:0 6px 10px rgba(0,0,0,0.3); display:flex; flex-direction:column; align-items:center; justify-content:space-between; transition: transform 0.3s, opacity 0.3s; padding:15px; box-sizing:border-box; }
+.produto img { width:auto; height:400px; object-fit:contain; }
+.produto div { font-size:18px; }
+.produto button { padding:8px 16px; margin:4px; cursor:pointer; border:none; border-radius:5px; background-color:#007bff; color:#fff; font-size:16px; }
+.produto button:hover { background-color:#0056b3; }
+.produto.central { transform:scale(1.1); opacity:1; z-index:10; }
+.produto:not(.central) { transform:scale(0.85); opacity:0.6; z-index:1; }
+.carrinho { position:fixed; bottom:20px; right:20px; border:2px solid #000; padding:25px; background:rgba(255,255,255,0.9); border-radius:15px; width:540px; height:540px; text-align:center; z-index:100; box-shadow:0 6px 12px rgba(0,0,0,0.3); display:flex; flex-direction:column; justify-content:space-between; font-size:18px; }
+.carrinho img { width:200px; height:200px; margin:0 auto 15px auto; }
+#itensCarrinho { flex-grow:1; overflow-y:auto; font-size:16px; margin-bottom:15px; }
+.carrinho button { padding:12px 24px; font-size:18px; border-radius:8px; margin-top:5px; }
 
 /* Overlay */
-#overlay {
-  display: none;
-  position: fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background: rgba(0,0,0,0.9);
-  color: #fff;
-  z-index: 9999;
-  text-align: center;
-  padding-top: 50px;
-  box-sizing: border-box;
-}
-
-#overlay h2 { margin-bottom: 20px; }
-#overlay div { margin-bottom: 10px; }
-#overlay button { margin: 10px; padding: 12px 24px; font-size: 18px; }
+#overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); color:#fff; z-index:9999; text-align:center; padding-top:50px; box-sizing:border-box; }
+#overlay h2 { margin-bottom:20px; }
+#overlay div { margin-bottom:10px; }
+#overlay button { margin:10px; padding:12px 24px; font-size:18px; }
 </style>
 </head>
 <body>
@@ -175,13 +83,13 @@ function mostrarProdutos() {
 
 // Alterar quantidade
 function alterarQuantidade(id, delta) {
-  if (!carrinho[id]) carrinho[id] = 0;
-  const produto = produtos.find(p => p.id === id);
-  let novaQtd = carrinho[id] + delta;
-  if (novaQtd < 0) novaQtd = 0;
-  if (novaQtd > produto.estoque) novaQtd = produto.estoque;
-  carrinho[id] = novaQtd;
-  document.getElementById(`qtd-${id}`).innerText = novaQtd;
+  if (!carrinho[id]) carrinho[id]=0;
+  const produto = produtos.find(p=>p.id===id);
+  let novaQtd = carrinho[id]+delta;
+  if(novaQtd<0) novaQtd=0;
+  if(novaQtd>produto.estoque) novaQtd=produto.estoque;
+  carrinho[id]=novaQtd;
+  document.getElementById(`qtd-${id}`).innerText=novaQtd;
   atualizarCarrinho();
   resetTimerLimpeza();
 }
@@ -189,24 +97,23 @@ function alterarQuantidade(id, delta) {
 // Atualiza carrinho
 function atualizarCarrinho() {
   const div = document.getElementById('itensCarrinho');
-  div.innerHTML = '';
-  let total = 0;
-  let vazio = true;
-  for (let id in carrinho) {
-    if (carrinho[id] > 0) {
-      vazio = false;
-      const p = produtos.find(prod => prod.id == id);
-      total += p.preco * carrinho[id];
-      div.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco * carrinho[id]).toFixed(2)}<br>`;
+  div.innerHTML='';
+  let total=0; let vazio=true;
+  for(let id in carrinho) {
+    if(carrinho[id]>0) {
+      vazio=false;
+      const p = produtos.find(prod=>prod.id==id);
+      total+=p.preco*carrinho[id];
+      div.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco*carrinho[id]).toFixed(2)}<br>`;
     }
   }
-  if (vazio) div.innerHTML = 'Vazio';
-  document.getElementById('total').innerText = total.toFixed(2);
+  if(vazio) div.innerHTML='Vazio';
+  document.getElementById('total').innerText=total.toFixed(2);
 }
 
 // Cancelar pedido
 function cancelarPedido() {
-  carrinho = {};
+  carrinho={};
   mostrarProdutos();
   atualizarCarrinho();
   resetTimerLimpeza();
@@ -214,13 +121,13 @@ function cancelarPedido() {
 
 // Destacar central
 function destacarCentral() {
-  const produtosDivs = document.querySelectorAll('.produto');
-  const container = document.getElementById('produtos');
-  container.addEventListener('scroll', () => {
-    const meio = container.scrollLeft + container.offsetWidth / 2;
-    produtosDivs.forEach(p => {
-      const pCentro = p.offsetLeft + p.offsetWidth / 2;
-      if (Math.abs(meio - pCentro) < p.offsetWidth / 2) p.classList.add('central');
+  const produtosDivs=document.querySelectorAll('.produto');
+  const container=document.getElementById('produtos');
+  container.addEventListener('scroll',()=>{
+    const meio=container.scrollLeft+container.offsetWidth/2;
+    produtosDivs.forEach(p=>{
+      const pCentro=p.offsetLeft+p.offsetWidth/2;
+      if(Math.abs(meio-pCentro)<p.offsetWidth/2) p.classList.add('central');
       else p.classList.remove('central');
     });
   });
@@ -228,75 +135,71 @@ function destacarCentral() {
 }
 
 // ----- OVERLAY -----
-document.getElementById('verPedidoBtn').addEventListener('click', () => {
-  const overlay = document.getElementById('overlay');
-  const overlayItens = document.getElementById('overlayItens');
-  overlayItens.innerHTML = '';
-  let total = 0;
-  for (let id in carrinho) {
-    if (carrinho[id] > 0) {
-      const p = produtos.find(prod => prod.id == id);
-      total += p.preco * carrinho[id];
+const overlay = document.getElementById('overlay');
+const overlayItens = document.getElementById('overlayItens');
+
+document.getElementById('verPedidoBtn').addEventListener('click',()=>{
+  overlayItens.innerHTML='';
+  let total=0; let vazio=true;
+  for(let id in carrinho){
+    if(carrinho[id]>0){
+      vazio=false;
+      const p=produtos.find(prod=>prod.id==id);
+      total+=p.preco*carrinho[id];
       overlayItens.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco*carrinho[id]).toFixed(2)}<br>`;
     }
   }
-  overlayItens.innerHTML += `<br><b>Total: R$ ${total.toFixed(2)}</b>`;
-  overlay.style.display = 'block';
+  if(vazio) overlayItens.innerHTML='Carrinho vazio!';
+  else overlayItens.innerHTML += `<br><b>Total: R$ ${total.toFixed(2)}</b>`;
+  overlay.style.display='block';
 });
 
-function fecharOverlay() {
-  document.getElementById('overlay').style.display = 'none';
-}
+function fecharOverlay(){ overlay.style.display='none'; }
 
 // ----- CONFIRMAR PEDIDO NO OVERLAY -----
-document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
-  const overlayItens = document.getElementById('overlayItens');
-  overlayItens.innerHTML = "⏳ Aguarde...";
-  
-  const items = [];
-  let total = 0;
-  for (let id in carrinho) {
-    const qtd = carrinho[id];
-    if (qtd > 0) {
-      const p = produtos.find(prod => prod.id == id);
-      items.push({ name: p.nome.toLowerCase().replace(/\s/g,"_"), qty: qtd });
-      total += p.preco * qtd;
+document.getElementById('overlayConfirmarBtn').addEventListener('click',()=>{
+  overlayItens.innerHTML="⏳ Aguarde...";
+
+  const items=[]; let total=0;
+  for(let id in carrinho){
+    const qtd=carrinho[id];
+    if(qtd>0){
+      const p=produtos.find(prod=>prod.id==id);
+      items.push({name:p.nome.toLowerCase().replace(/\s/g,"_"),qty:qtd});
+      total+=p.preco*qtd;
     }
   }
 
-  const pedido = { order_id: "PED-" + Date.now(), total: total, items: items };
+  const pedido={order_id:"PED-"+Date.now(), total:total, items:items};
 
-  fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(pedido)
+  fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido',{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(pedido)
   })
-  .then(async resp => {
+  .then(async resp=>{
     let data;
-    try { data = await resp.json(); } catch(e) { data={status:"ok"}; }
-    if (resp.ok) {
-      setTimeout(()=> {
-        overlayItens.innerHTML = "✅ Aperte o botão verde da máquina para continuar.";
-        // Após 3s, fecha overlay e reseta catálogo
-        setTimeout(()=> {
+    try{ data=await resp.json(); }catch(e){ data={status:"ok"};}
+    if(resp.ok){
+      setTimeout(()=>{
+        overlayItens.innerHTML="✅ Aperte o botão verde da máquina para continuar.";
+        setTimeout(()=>{
           fecharOverlay();
           cancelarPedido();
-        }, 3000);
-      }, 1000);
-    } else {
-      overlayItens.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
-    }
+        },3000);
+      },1000);
+    } else overlayItens.innerHTML="❌ Erro ao enviar pedido!";
   })
-  .catch(err => { overlayItens.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão."; });
+  .catch(err=>{ overlayItens.innerHTML="❌ Erro ao enviar pedido!"; });
 
   resetTimerLimpeza();
 });
 
 // Timer de limpeza
-function resetTimerLimpeza() {
+function resetTimerLimpeza(){
   if(timerLimpeza) clearTimeout(timerLimpeza);
-  timerLimpeza = setTimeout(()=>{
-    carrinho = {};
+  timerLimpeza=setTimeout(()=>{
+    carrinho={};
     mostrarProdutos();
     atualizarCarrinho();
     console.log("Carrinho limpo por inatividade");
