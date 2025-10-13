@@ -1,19 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Convêniencia Machine</title>
 <style>
-  body {
-    font-family: Arial;
-    margin: 0;
-    padding: 0;
-    background: url('fundo.png') no-repeat center center fixed;
-    background-size: cover;
-    overflow-x: hidden;
-  }
+body {
+  font-family: Arial;
+  margin: 0;
+  padding: 0;
+  background: url('fundo.png') no-repeat center center fixed;
+  background-size: cover;
+  overflow-x: hidden;
+}
 
-  h1 {
-    text-align: center;
-    color: #fff;
-    text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
-    margin-top: 20px;
-  }
+h1 {
+  text-align: center;
+  color: #fff;
+  text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
+  margin-top: 20px;
+}
 
 #produtos {
   display: flex;
@@ -45,16 +50,14 @@
 
 .produto img {
   width: auto;
-  height: 400px; /* 150% do original */
+  height: 400px;
   object-fit: contain;
 }
 
-.produto div {
-  font-size: 18px; /* aumenta textos do produto proporcionalmente */
-}
+.produto div { font-size: 18px; }
 
 .produto button {
-  padding: 8px 16px; /* aumenta botões proporcionalmente */
+  padding: 8px 16px;
   margin: 4px;
   cursor: pointer;
   border: none;
@@ -64,21 +67,10 @@
   font-size: 16px;
 }
 
-.produto button:hover {
-  background-color: #0056b3;
-}
+.produto button:hover { background-color: #0056b3; }
 
-.produto.central {
-  transform: scale(1.1);
-  opacity: 1;
-  z-index: 10;
-}
-
-.produto:not(.central) {
-  transform: scale(0.85);
-  opacity: 0.6;
-  z-index: 1;
-}
+.produto.central { transform: scale(1.1); opacity: 1; z-index: 10; }
+.produto:not(.central) { transform: scale(0.85); opacity: 0.6; z-index: 1; }
 
 .carrinho {
   position: fixed;
@@ -88,36 +80,43 @@
   padding: 25px;
   background: rgba(255,255,255,0.9);
   border-radius: 15px;
-  width: 540px; /* 200% do original */
-  height: 540px; /* 200% do original */
+  width: 540px;
+  height: 540px;
   text-align: center;
   z-index: 100;
   box-shadow: 0 6px 12px rgba(0,0,0,0.3);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  font-size: 18px; /* aumenta textos dentro do carrinho */
+  font-size: 18px;
 }
 
 .carrinho img {
-  width: 200px; /* 200% do original */
-  height: 200px; /* 200% do original */
+  width: 200px;
+  height: 200px;
   margin: 0 auto 15px auto;
 }
 
-#itensCarrinho {
-  flex-grow: 1;
-  overflow-y: auto;
-  font-size: 16px; /* aumenta proporcionalmente */
-  margin-bottom: 15px;
+#itensCarrinho { flex-grow: 1; overflow-y: auto; font-size: 16px; margin-bottom: 15px; }
+.carrinho button { padding: 12px 24px; font-size: 18px; border-radius: 8px; margin-top: 5px; }
+
+/* Overlay */
+#overlay {
+  display: none;
+  position: fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: rgba(0,0,0,0.9);
+  color: #fff;
+  z-index: 9999;
+  text-align: center;
+  padding-top: 50px;
+  box-sizing: border-box;
 }
 
-.carrinho button {
-  padding: 12px 24px; /* aumenta proporcionalmente */
-  font-size: 18px;
-  border-radius: 8px;
-  margin-top: 5px;
-}
+#overlay h2 { margin-bottom: 20px; }
+#overlay div { margin-bottom: 10px; }
+#overlay button { margin: 10px; padding: 12px 24px; font-size: 18px; }
 </style>
 </head>
 <body>
@@ -128,8 +127,15 @@
   <img src="carrinho.png" alt="Carrinho">
   <div id="itensCarrinho">Vazio</div>
   <div>Total: R$ <span id="total">0.00</span></div>
-  <button id="confirmarBtn">Confirmar Pedido</button>
+  <button id="verPedidoBtn">Ver Pedido</button>
   <button onclick="cancelarPedido()">Cancelar Pedido</button>
+</div>
+
+<div id="overlay">
+  <h2>Seu Pedido</h2>
+  <div id="overlayItens"></div>
+  <button id="overlayConfirmarBtn">Confirmar Pedido</button>
+  <button onclick="fecharOverlay()">Cancelar</button>
 </div>
 
 <script>
@@ -151,22 +157,17 @@ let timerLimpeza = null;
 function mostrarProdutos() {
   const div = document.getElementById('produtos');
   div.innerHTML = '';
-  produtos.forEach((p) => {
+  produtos.forEach(p => {
     const prodDiv = document.createElement('div');
     prodDiv.className = 'produto';
     prodDiv.innerHTML = `
       <img src="${p.img}" alt="${p.nome}">
-      <div>
-        <b>${p.nome}</b><br>
-        R$ ${p.preco.toFixed(2)}<br>
-        Estoque: ${p.estoque}
-      </div>
+      <div><b>${p.nome}</b><br>R$ ${p.preco.toFixed(2)}<br>Estoque: ${p.estoque}</div>
       <div>
         <button onclick="alterarQuantidade(${p.id}, -1)">-</button>
         <span id="qtd-${p.id}">0</span>
         <button onclick="alterarQuantidade(${p.id}, 1)">+</button>
-      </div>
-    `;
+      </div>`;
     div.appendChild(prodDiv);
   });
   destacarCentral();
@@ -211,7 +212,7 @@ function cancelarPedido() {
   resetTimerLimpeza();
 }
 
-// Destacar produto central
+// Destacar central
 function destacarCentral() {
   const produtosDivs = document.querySelectorAll('.produto');
   const container = document.getElementById('produtos');
@@ -219,26 +220,39 @@ function destacarCentral() {
     const meio = container.scrollLeft + container.offsetWidth / 2;
     produtosDivs.forEach(p => {
       const pCentro = p.offsetLeft + p.offsetWidth / 2;
-      if (Math.abs(meio - pCentro) < p.offsetWidth / 2) {
-        p.classList.add('central');
-      } else {
-        p.classList.remove('central');
-      }
+      if (Math.abs(meio - pCentro) < p.offsetWidth / 2) p.classList.add('central');
+      else p.classList.remove('central');
     });
   });
   produtosDivs[0].classList.add('central');
 }
 
-// ----- CONFIRMAR PEDIDO -----
-document.getElementById('confirmarBtn').addEventListener('click', function() {
-  if (Object.values(carrinho).every(q => q === 0)) {
-    alert("Carrinho vazio!");
-    return;
+// ----- OVERLAY -----
+document.getElementById('verPedidoBtn').addEventListener('click', () => {
+  const overlay = document.getElementById('overlay');
+  const overlayItens = document.getElementById('overlayItens');
+  overlayItens.innerHTML = '';
+  let total = 0;
+  for (let id in carrinho) {
+    if (carrinho[id] > 0) {
+      const p = produtos.find(prod => prod.id == id);
+      total += p.preco * carrinho[id];
+      overlayItens.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco*carrinho[id]).toFixed(2)}<br>`;
+    }
   }
+  overlayItens.innerHTML += `<br><b>Total: R$ ${total.toFixed(2)}</b>`;
+  overlay.style.display = 'block';
+});
 
-  const divCarrinho = document.getElementById('itensCarrinho');
-  divCarrinho.innerHTML = "⏳ Aperte botão verde da maquina para continuar";
+function fecharOverlay() {
+  document.getElementById('overlay').style.display = 'none';
+}
 
+// ----- CONFIRMAR PEDIDO NO OVERLAY -----
+document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
+  const overlayItens = document.getElementById('overlayItens');
+  overlayItens.innerHTML = "⏳ Aguarde...";
+  
   const items = [];
   let total = 0;
   for (let id in carrinho) {
@@ -250,13 +264,8 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
     }
   }
 
-  const pedido = {
-    order_id: "PED-" + Date.now(),
-    total: total,
-    items: items
-  };
+  const pedido = { order_id: "PED-" + Date.now(), total: total, items: items };
 
-  // Envia para Flask / servidor externo com tratamento seguro de JSON
   fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -264,37 +273,34 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   })
   .then(async resp => {
     let data;
-    try {
-      data = await resp.json();
-    } catch(e) {
-      data = { status: "ok" };
-    }
-
+    try { data = await resp.json(); } catch(e) { data={status:"ok"}; }
     if (resp.ok) {
-      console.log("Pedido enviado:", data);
-      divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto. Obrigada..";
+      setTimeout(()=> {
+        overlayItens.innerHTML = "✅ Aperte o botão verde da máquina para continuar.";
+        // Após 3s, fecha overlay e reseta catálogo
+        setTimeout(()=> {
+          fecharOverlay();
+          cancelarPedido();
+        }, 3000);
+      }, 1000);
     } else {
-      console.error("Erro ao enviar pedido:", data);
-      divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
+      overlayItens.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
     }
   })
-  .catch(err => {
-    console.error("Erro ao enviar pedido:", err);
-    divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
-  });
+  .catch(err => { overlayItens.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão."; });
 
   resetTimerLimpeza();
 });
 
-// Timer de limpeza do carrinho
+// Timer de limpeza
 function resetTimerLimpeza() {
-  if (timerLimpeza) clearTimeout(timerLimpeza);
-  timerLimpeza = setTimeout(() => {
+  if(timerLimpeza) clearTimeout(timerLimpeza);
+  timerLimpeza = setTimeout(()=>{
     carrinho = {};
     mostrarProdutos();
     atualizarCarrinho();
     console.log("Carrinho limpo por inatividade");
-  }, 180000); // 3 minutos
+  },180000);
 }
 
 mostrarProdutos();
