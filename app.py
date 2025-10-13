@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 import time
 import os
 
 app = Flask(__name__)
+CORS(app)  # Permite que qualquer site faça requisições
 
 # Configurações
 NUMERO_SERIE_MAQUINA = "8701372447323147"
