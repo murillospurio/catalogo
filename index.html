@@ -254,16 +254,27 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
     items: items
   };
 
-  // --- ALTERAÇÃO: envia para Flask / servidor externo ---
+  // Envia para Flask / servidor externo com tratamento seguro de JSON
   fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pedido)
   })
-  .then(resp => resp.json())
-  .then(data => {
-    console.log("Pedido enviado:", data);
-    divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto. Obrigada..";
+  .then(async resp => {
+    let data;
+    try {
+      data = await resp.json();
+    } catch(e) {
+      data = { status: "ok" };
+    }
+
+    if (resp.ok) {
+      console.log("Pedido enviado:", data);
+      divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto. Obrigada..";
+    } else {
+      console.error("Erro ao enviar pedido:", data);
+      divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
+    }
   })
   .catch(err => {
     console.error("Erro ao enviar pedido:", err);
