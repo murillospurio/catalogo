@@ -16,8 +16,7 @@ ESP32_URL = "http://192.168.5.57/liberar"  # IP e rota do seu ESP32
 # === FILA DE PEDIDOS APROVADOS ===
 pedidos_aprovados = []
 
-# === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA POS ===
-def criar_pagamento_maquininha(amount, payment_type="credit_card", descricao="Pedido"):
+def criar_pagamento_maquininha(amount, descricao="Pedido"):
     url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
 
     headers = {
@@ -25,12 +24,11 @@ def criar_pagamento_maquininha(amount, payment_type="credit_card", descricao="Pe
         "Content-Type": "application/json"
     }
 
-    # Ajuste para Point Pro 2 (POS Cloud)
-   payload = {
-    "amount": float(amount_cents),
-    "description": descricao
-}
-
+    # Payload sem forçar tipo de pagamento
+    payload = {
+        "amount": float(amount),
+        "description": descricao
+    }
 
     try:
         response = requests.post(url, headers=headers, json=payload)
@@ -48,6 +46,7 @@ def criar_pagamento_maquininha(amount, payment_type="credit_card", descricao="Pe
     except requests.exceptions.RequestException as e:
         print("Erro de requisição:", e)
         return None
+
 
 # === FUNÇÃO: VERIFICAR STATUS DO PAGAMENTO ===
 def verificar_pagamento(payment_id):
