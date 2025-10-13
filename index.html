@@ -182,15 +182,16 @@ function fecharOverlay(){
 }
 
 // ----- CONFIRMAR PEDIDO NO OVERLAY -----
-document.getElementById('overlayConfirmarBtn').addEventListener('click',()=>{
-  overlayItens.innerHTML="⏳ Aguarde , aperte botão verde da maquina para continuar. Obrigada pela compra";
-  const items=[]; let total=0;
-  for(let id in carrinho){
-    const qtd=carrinho[id];
-    if(qtd>0){
-      const p=produtos.find(prod=>prod.id==id);
-      items.push({name:p.nome.toLowerCase().replace(/\s/g,"_"),qty:qtd});
-      total+=p.preco*qtd;
+document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
+  overlayItens.innerHTML = "✅ Aperte o botão verde da máquina para continuar. Obrigada!";
+  const items = [];
+  let total = 0;
+  for (let id in carrinho) {
+    const qtd = carrinho[id];
+    if (qtd > 0) {
+      const p = produtos.find(prod => prod.id == id);
+      items.push({ name: p.nome.toLowerCase().replace(/\s/g,"_"), qty: qtd });
+      total += p.preco * qtd;
     }
   }
 
