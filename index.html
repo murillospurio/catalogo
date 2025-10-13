@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Conveniencia Machine</title>
+<title>Convêniencia Machine</title>
 <style>
   body {
     font-family: Arial;
@@ -20,114 +20,166 @@
     margin-top: 20px;
   }
 
-#produtos {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 50px 50px;
-  gap: 20px;
-  justify-content: flex-start;
-  scrollbar-width: none;
-}
+  #produtos {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 50px 50px;
+    gap: 20px;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
 
-#produtos::-webkit-scrollbar { display: none; }
+  #produtos::-webkit-scrollbar { display: none; }
 
-.produto {
-  flex: 0 0 250px;
-  height: 380px;
-  scroll-snap-align: center;
-  border-radius: 15px;
-  background: rgba(255,255,255,0.9);
-  box-shadow: 0 6px 10px rgba(0,0,0,0.3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  transition: transform 0.3s, opacity 0.3s;
-  padding: 15px;
-  box-sizing: border-box;
-}
+  .produto {
+    flex: 0 0 375px; /* aumentado 150% */
+    height: 570px; /* proporcional */
+    scroll-snap-align: center;
+    border-radius: 15px;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.3s, opacity 0.3s;
+    padding: 15px;
+    box-sizing: border-box;
+  }
 
-.produto img {
-  width: auto;
-  height: 200px;
-  object-fit: contain;
-}
+  .produto img {
+    width: auto;
+    height: 300px; /* maior proporcional */
+    object-fit: contain;
+  }
 
-.produto button {
-  padding: 6px 12px;
-  margin: 2px;
-  cursor: pointer;
-  border: none;
-  border-radius: 5px;
-  background-color: #007bff;
-  color: #fff;
-  font-size: 14px;
-}
+  .produto div { font-size: 18px; }
 
-.produto button:hover {
-  background-color: #0056b3;
-}
+  .produto button {
+    padding: 10px 18px;
+    margin: 4px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: #fff;
+    font-size: 16px;
+  }
 
-.produto.central {
-  transform: scale(1.1);
-  opacity: 1;
-  z-index: 10;
-}
+  .produto button:hover { background-color: #0056b3; }
 
-.produto:not(.central) {
-  transform: scale(0.85);
-  opacity: 0.6;
-  z-index: 1;
-}
+  .produto.central {
+    transform: scale(1.1);
+    opacity: 1;
+    z-index: 10;
+  }
 
-.carrinho {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  border: 2px solid #000;
-  padding: 10px;
-  background: rgba(255,255,255,0.9);
-  border-radius: 10px;
-  width: 220px;
-  height: 220px;
-  text-align: center;
-  z-index: 100;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
+  .produto:not(.central) {
+    transform: scale(0.85);
+    opacity: 0.6;
+    z-index: 1;
+  }
 
-.carrinho img {
-  width: 50px;
-  height: 50px;
-  margin: 0 auto 5px auto;
-}
+  .carrinho {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    border: 2px solid #000;
+    padding: 25px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 15px;
+    width: 540px;
+    height: 540px;
+    text-align: center;
+    z-index: 100;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 18px;
+  }
 
-#itensCarrinho {
-  flex-grow: 1;
-  overflow-y: auto;
-  font-size: 14px;
-  margin-bottom: 5px;
-}
+  .carrinho img {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 15px auto;
+  }
 
-.carrinho button {
-  padding: 6px 12px;
-  font-size: 14px;
-}
+  #itensCarrinho {
+    flex-grow: 1;
+    overflow-y: auto;
+    font-size: 16px;
+    margin-bottom: 15px;
+  }
+
+  .carrinho button {
+    padding: 12px 24px;
+    font-size: 18px;
+    border-radius: 8px;
+    margin-top: 5px;
+  }
+
+  /* Tela de revisão do pedido */
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  .overlay h2 { margin-bottom: 20px; }
+
+  .overlay #pedidoItens {
+    max-height: 60%;
+    overflow-y: auto;
+    width: 80%;
+    text-align: left;
+    margin-bottom: 20px;
+    font-size: 20px;
+  }
+
+  .overlay button {
+    padding: 12px 30px;
+    font-size: 20px;
+    margin: 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-confirm { background-color: #28a745; color: #fff; }
+  .btn-cancel { background-color: #dc3545; color: #fff; }
+
 </style>
 </head>
 <body>
-<h1>Catálogo de Teste</h1>
+<h1>Convêniencia Machine</h1>
 <div id="produtos"></div>
 
 <div class="carrinho">
   <img src="carrinho.png" alt="Carrinho">
   <div id="itensCarrinho">Vazio</div>
   <div>Total: R$ <span id="total">0.00</span></div>
-  <button id="confirmarBtn">Confirmar Pedido</button>
-  <button onclick="cancelarPedido()">Cancelar Pedido</button>
+  <button id="verPedidoBtn">Ver Pedido</button>
+</div>
+
+<div class="overlay" id="overlayPedido">
+  <h2>Revisão do Pedido</h2>
+  <div id="pedidoItens"></div>
+  <button class="btn-confirm" id="confirmarPedidoOverlay">Confirmar</button>
+  <button class="btn-cancel" id="cancelarPedidoOverlay">Cancelar</button>
+  <div id="mensagemFinal" style="margin-top:20px; font-size:22px;"></div>
 </div>
 
 <script>
@@ -227,15 +279,48 @@ function destacarCentral() {
   produtosDivs[0].classList.add('central');
 }
 
-// ----- CONFIRMAR PEDIDO -----
-document.getElementById('confirmarBtn').addEventListener('click', function() {
+// Abrir overlay de pedido
+document.getElementById('verPedidoBtn').addEventListener('click', () => {
+  const overlay = document.getElementById('overlayPedido');
+  const pedidoDiv = document.getElementById('pedidoItens');
+  pedidoDiv.innerHTML = '';
+  let total = 0;
+  let vazio = true;
+  for (let id in carrinho) {
+    if (carrinho[id] > 0) {
+      vazio = false;
+      const p = produtos.find(prod => prod.id == id);
+      total += p.preco * carrinho[id];
+      pedidoDiv.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco * carrinho[id]).toFixed(2)}<br>`;
+    }
+  }
+  if (vazio) pedidoDiv.innerHTML = 'Carrinho vazio';
+  pedidoDiv.innerHTML += `<hr>Total: R$ ${total.toFixed(2)}`;
+  document.getElementById('mensagemFinal').innerText = '';
+  overlay.style.display = 'flex';
+});
+
+// Cancelar overlay
+document.getElementById('cancelarPedidoOverlay').addEventListener('click', () => {
+  document.getElementById('overlayPedido').style.display = 'none';
+});
+
+// Confirmar overlay e enviar pedido
+document.getElementById('confirmarPedidoOverlay').addEventListener('click', () => {
+  const divCarrinho = document.getElementById('itensCarrinho');
+  const mensagem = document.getElementById('mensagemFinal');
+
   if (Object.values(carrinho).every(q => q === 0)) {
     alert("Carrinho vazio!");
     return;
   }
 
-  const divCarrinho = document.getElementById('itensCarrinho');
-  divCarrinho.innerHTML = "⏳ Aguardando processar pedido ...";
+  // Mostra "Aguarde..." imediatamente
+  mensagem.innerText = 'Aguarde...';
+
+  setTimeout(() => {
+    mensagem.innerText = '⏳ Aperte botão verde da máquina para continuar';
+  }, 3000);
 
   const items = [];
   let total = 0;
@@ -254,7 +339,7 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
     items: items
   };
 
-  // Envia para Flask / servidor externo com tratamento seguro de JSON
+  // --- FETCH preservado exatamente ---
   fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -262,11 +347,8 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   })
   .then(async resp => {
     let data;
-    try {
-      data = await resp.json();
-    } catch(e) {
-      data = { status: "ok" };
-    }
+    try { data = await resp.json(); } 
+    catch(e) { data = { status: "ok" }; }
 
     if (resp.ok) {
       console.log("Pedido enviado:", data);
@@ -282,6 +364,7 @@ document.getElementById('confirmarBtn').addEventListener('click', function() {
   });
 
   resetTimerLimpeza();
+  document.getElementById('overlayPedido').style.display = 'none';
 });
 
 // Timer de limpeza do carrinho
