@@ -5,30 +5,38 @@ import os
 
 app = Flask(__name__)
 
+# Configurações
 NUMERO_SERIE_MAQUINA = "8701372447323147"
 ESP32_URL = "http://192.168.5.57/dispense"  # IP do ESP32
 
+# Função simulada de pagamento
 def processa_pagamento_maquininha(valor):
-    print(f"Enviando pagamento de {valor} para a máquina {NUMERO_SERIE_MAQUINA}...")
-    time.sleep(1)
+    print(f"Enviando pagamento de R$ {valor:.2f} para a máquina {NUMERO_SERIE_MAQUINA}...")
+    time.sleep(1)  # simula processamento
     print("Pagamento aprovado pela máquina!")
     return True
 
-@app.route("/criar_pedido", methods=["POST"])
+# Rota que o catálogo chama
+@app.route("/pedido", methods=["POST"])
 def criar_pedido():
     data = request.get_json()
-    if not data or "items" not in data:
+    if not data or "items" not in data or "total" not in data:
         return jsonify({"error": "JSON inválido"}), 400
 
-    total = sum(item["qty"] * item.get("price", 0) for item in data["items"])
-    print(f"Total do pedido: {total}")
+    total = data["total"]
+    print(f"Recebido pedido com total R$ {total:.2f} e itens: {data['items']}")
 
+    # Processa pagamento na maquininha
     aprovado = processa_pagamento_maquininha(total)
 
     if aprovado:
-        pedido = {"status": "paid", "items": data["items"]}
+        pedido_para_esp = {
+            "order_id": data.get("order_id", f"PED-{int(time.time())}"),
+            "total": total,
+            "items": data["items"]
+        }
         try:
-            resp = requests.post(ESP32_URL, json=pedido, timeout=5)
+            resp = requests.post(ESP32_URL, json=pedido_para_esp, timeout=5)
             if resp.status_code == 200:
                 print("✅ Pedido enviado para o ESP32 com sucesso!")
                 return jsonify({"status": "pedido aprovado e enviado para ESP32"}), 200
