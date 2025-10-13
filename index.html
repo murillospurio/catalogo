@@ -1,8 +1,3 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Convêniencia Machine</title>
 <style>
   body {
     font-family: Arial;
@@ -50,16 +45,16 @@
 
 .produto img {
   width: auto;
-  height: 400px; 
+  height: 400px; /* 150% do original */
   object-fit: contain;
 }
 
 .produto div {
-  font-size: 18px;
+  font-size: 18px; /* aumenta textos do produto proporcionalmente */
 }
 
 .produto button {
-  padding: 8px 16px;
+  padding: 8px 16px; /* aumenta botões proporcionalmente */
   margin: 4px;
   cursor: pointer;
   border: none;
@@ -93,74 +88,35 @@
   padding: 25px;
   background: rgba(255,255,255,0.9);
   border-radius: 15px;
-  width: 540px;
-  height: 540px;
+  width: 540px; /* 200% do original */
+  height: 540px; /* 200% do original */
   text-align: center;
   z-index: 100;
   box-shadow: 0 6px 12px rgba(0,0,0,0.3);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  font-size: 18px;
+  font-size: 18px; /* aumenta textos dentro do carrinho */
 }
 
 .carrinho img {
-  width: 200px;
-  height: 200px;
+  width: 200px; /* 200% do original */
+  height: 200px; /* 200% do original */
   margin: 0 auto 15px auto;
 }
 
 #itensCarrinho {
   flex-grow: 1;
   overflow-y: auto;
-  font-size: 16px;
+  font-size: 16px; /* aumenta proporcionalmente */
   margin-bottom: 15px;
 }
 
 .carrinho button {
-  padding: 12px 24px;
+  padding: 12px 24px; /* aumenta proporcionalmente */
   font-size: 18px;
   border-radius: 8px;
   margin-top: 5px;
-}
-
-/* Estilo da tela de pedido expandida */
-#pedidoTela {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.8);
-  color: #fff;
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 200;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-#pedidoItens {
-  background: rgba(255,255,255,0.95);
-  color: #000;
-  width: 90%;
-  max-width: 600px;
-  padding: 20px;
-  border-radius: 15px;
-  margin-bottom: 20px;
-  text-align: left;
-  max-height: 60%;
-  overflow-y: auto;
-}
-
-#pedidoTela button {
-  padding: 12px 30px;
-  margin: 5px;
-  font-size: 18px;
-  border-radius: 8px;
-  cursor: pointer;
 }
 </style>
 </head>
@@ -172,16 +128,8 @@
   <img src="carrinho.png" alt="Carrinho">
   <div id="itensCarrinho">Vazio</div>
   <div>Total: R$ <span id="total">0.00</span></div>
-  <button id="verPedidoBtn">Ver Pedido</button>
+  <button id="confirmarBtn">Confirmar Pedido</button>
   <button onclick="cancelarPedido()">Cancelar Pedido</button>
-</div>
-
-<!-- Tela de pedido expandida -->
-<div id="pedidoTela">
-  <div id="pedidoItens"></div>
-  <div id="mensagemPedido"></div>
-  <button id="confirmarPedidoTela">Confirmar Pedido</button>
-  <button onclick="fecharPedidoTela()">Cancelar</button>
 </div>
 
 <script>
@@ -281,39 +229,16 @@ function destacarCentral() {
   produtosDivs[0].classList.add('central');
 }
 
-// Abrir tela de pedido
-document.getElementById('verPedidoBtn').addEventListener('click', () => {
-  const pedidoItensDiv = document.getElementById('pedidoItens');
-  pedidoItensDiv.innerHTML = '';
-  for (let id in carrinho) {
-    if (carrinho[id] > 0) {
-      const p = produtos.find(prod => prod.id == id);
-      pedidoItensDiv.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco * carrinho[id]).toFixed(2)}<br>`;
-    }
-  }
-  document.getElementById('mensagemPedido').innerText = '';
-  document.getElementById('pedidoTela').style.display = 'flex';
-});
-
-// Fechar tela de pedido
-function fecharPedidoTela() {
-  document.getElementById('pedidoTela').style.display = 'none';
-}
-
-// Confirmar pedido na tela expandida
-document.getElementById('confirmarPedidoTela').addEventListener('click', () => {
-  const pedidoItensDiv = document.getElementById('pedidoItens');
-  const mensagemDiv = document.getElementById('mensagemPedido');
-
+// ----- CONFIRMAR PEDIDO -----
+document.getElementById('confirmarBtn').addEventListener('click', function() {
   if (Object.values(carrinho).every(q => q === 0)) {
     alert("Carrinho vazio!");
     return;
   }
 
-  // Mostra mensagem inicial de aguarde
-  mensagemDiv.innerText = "⏳ Aguarde...";
-  
-  // Envia o pedido para o servidor (fetch original)
+  const divCarrinho = document.getElementById('itensCarrinho');
+  divCarrinho.innerHTML = "⏳ Aperte botão verde da maquina para continuar";
+
   const items = [];
   let total = 0;
   for (let id in carrinho) {
@@ -331,22 +256,31 @@ document.getElementById('confirmarPedidoTela').addEventListener('click', () => {
     items: items
   };
 
+  // Envia para Flask / servidor externo com tratamento seguro de JSON
   fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pedido)
   })
-  .then(resp => resp.json().catch(()=>({status:"ok"})))
-  .then(data => {
-    console.log("Pedido enviado:", data);
-    // Após 3 segundos, mostra a mensagem para apertar botão verde
-    setTimeout(() => {
-      mensagemDiv.innerText = "✅ Pedido enviado! ⏳ Aperte botão verde da máquina para continuar.";
-    }, 3000);
+  .then(async resp => {
+    let data;
+    try {
+      data = await resp.json();
+    } catch(e) {
+      data = { status: "ok" };
+    }
+
+    if (resp.ok) {
+      console.log("Pedido enviado:", data);
+      divCarrinho.innerHTML = "✅ Pedido enviado! Aguardando liberação do produto. Obrigada..";
+    } else {
+      console.error("Erro ao enviar pedido:", data);
+      divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
+    }
   })
   .catch(err => {
     console.error("Erro ao enviar pedido:", err);
-    mensagemDiv.innerText = "❌ Erro ao enviar pedido! Verifique conexão.";
+    divCarrinho.innerHTML = "❌ Erro ao enviar pedido! Verifique conexão.";
   });
 
   resetTimerLimpeza();
@@ -360,7 +294,7 @@ function resetTimerLimpeza() {
     mostrarProdutos();
     atualizarCarrinho();
     console.log("Carrinho limpo por inatividade");
-  }, 180000);
+  }, 180000); // 3 minutos
 }
 
 mostrarProdutos();
