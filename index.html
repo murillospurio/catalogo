@@ -183,7 +183,7 @@ function fecharOverlay(){
 
 // ----- CONFIRMAR PEDIDO NO OVERLAY -----
 document.getElementById('overlayConfirmarBtn').addEventListener('click',()=>{
-  overlayItens.innerHTML="⏳ Aguarde...";
+  overlayItens.innerHTML="⏳ Aguarde , aperte botão verde da maquina para continuar. Obrigada pela compra";
   const items=[]; let total=0;
   for(let id in carrinho){
     const qtd=carrinho[id];
