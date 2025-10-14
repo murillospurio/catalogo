@@ -24,7 +24,6 @@ def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
     payload = {
         "amount": float(amount),
         "description": descricao,
-        "external_reference": str(order_id)
     }
 
     try:
