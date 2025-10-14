@@ -103,18 +103,18 @@ def webhook():
     print("📩 Webhook recebido!")
     print(json.dumps(info, indent=2))
 
-    payment_id = info.get("data", {}).get("id")
+    # Pega o payment_id de forma segura
+    payment_id = info.get("data", {}).get("id") or info.get("id")
     topic = info.get("topic")
 
-    if topic == "point_integration_ipn" and payment_id:
+    if payment_id:
         # Consulta o status real do pagamento na API
         payment_info = verificar_pagamento(payment_id)
         status = payment_info.get("status") if payment_info else None
-        order_ref = None
         print(f"💳 Pagamento {payment_id} status={status}")
 
         if status == "approved":
-            # Pega o último pedido pendente (já que só processamos um por vez)
+            # Pega o último pedido pendente
             if pedidos_pendentes:
                 order_ref, pedido = pedidos_pendentes.popitem()
                 limpar_pagamento_maquininha(POS_EXTERNAL_ID)
