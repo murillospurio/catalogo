@@ -16,6 +16,7 @@ ESP32_URL = "http://192.168.5.57/liberar"  # IP e rota do seu ESP32
 # === FILA DE PEDIDOS APROVADOS ===
 pedidos_aprovados = []
 
+
 # === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA POS ===
 def criar_pagamento_maquininha(amount, descricao="Pedido"):
     url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
@@ -47,6 +48,24 @@ def criar_pagamento_maquininha(amount, descricao="Pedido"):
         print("Erro de requisição:", e)
         return None
 
+
+# === FUNÇÃO: LIMPAR PAGAMENTO PENDENTE NA MAQUININHA ===
+def limpar_pagamento_maquininha(serial_number):
+    """Cancela/limpa o último pagamento pendente da maquininha"""
+    try:
+        url = f"https://api.mercadopago.com/instore/qr/seller/collectors/1433246274/devices/{serial_number}/cancel"
+        headers = {
+            "Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        r = requests.post(url, headers=headers)
+        print(f"🔄 Limpeza da maquininha: {r.status_code} -> {r.text}")
+        return r.status_code == 200
+    except Exception as e:
+        print(f"Erro ao limpar maquininha: {e}")
+        return False
+
+
 # === FUNÇÃO: VERIFICAR STATUS DO PAGAMENTO ===
 def verificar_pagamento(payment_id):
     url = f"https://api.mercadopago.com/v1/payments/{payment_id}"
@@ -55,6 +74,7 @@ def verificar_pagamento(payment_id):
     if response.ok:
         return response.json().get("status")
     return None
+
 
 # === ROTA: RECEBER PEDIDO DO CATÁLOGO ===
 @app.route("/pedido", methods=["POST"])
@@ -87,6 +107,9 @@ def receber_pedido():
 
             if status == "approved":
                 print("✅ Pagamento aprovado!")
+
+                # Limpa o pagamento na maquininha após aprovação
+                limpar_pagamento_maquininha("8701372447323147")
 
                 payload_esp = [{"id": idx + 1, "quantidade": item["qty"]} for idx, item in enumerate(itens)]
                 pedidos_aprovados.append({
@@ -129,7 +152,6 @@ def webhook():
 
         print("Body:", data)
 
-        # Extrai o ID do pagamento
         payment_id = request.args.get("id") or data.get("id") or data.get("data", {}).get("id")
         if not payment_id:
             print("⚠️ Nenhum ID de pagamento encontrado.")
@@ -145,21 +167,13 @@ def webhook():
         print(f"💳 Status do pagamento {payment_id}: {status}")
 
         if status == "approved":
-            external_ref = info.get("external_reference")
-            print(f"🧾 Pagamento aprovado! External reference: {external_ref}")
-
-            # Cria um pedido genérico (se não estiver em pedidos_aprovados)
-            if not any(p.get("order_id") == external_ref for p in pedidos_aprovados):
-                novo_pedido = {
-                    "order_id": external_ref or str(payment_id),
-                    "pedido": [{"id": 1, "quantidade": 1}],
-                    "total": info.get("transaction_amount", 0),
-                    "liberado": False
-                }
-                pedidos_aprovados.append(novo_pedido)
-                print(f"✅ Pedido criado automaticamente e adicionado à fila do ESP32: {novo_pedido}")
+            if payment_id not in [p.get("id") for p in pedidos_aprovados]:
+                pedidos_aprovados.append(info)
+                print("✅ Pagamento aprovado e adicionado à fila do ESP32.")
+                # Limpa a maquininha também no webhook
+                limpar_pagamento_maquininha("8701372447323147")
             else:
-                print("⚠️ Pedido já existente na fila, ignorando duplicata.")
+                print("⚠️ Pagamento já existente na fila, ignorando duplicata.")
 
         return jsonify({"status": "received"}), 200
 
