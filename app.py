@@ -24,7 +24,7 @@ def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
     payload = {
         "amount": float(amount),
         "description": descricao,
-        "external_reference": str(order_id)  # 🔗 liga o pedido ao pagamento
+        "external_reference": str(order_id)
     }
 
     try:
@@ -45,7 +45,7 @@ def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
 # === FUNÇÃO: LIMPAR PAGAMENTO PENDENTE NA MAQUININHA ===
 def limpar_pagamento_maquininha(serial_number):
     try:
-        url = f"https://api.mercadopago.com/instore/qr/seller/collectors/1433246274/devices/{serial_number}/cancel"
+        url = f"https://api.mercadopago.com/point/integration-api/devices/{serial_number}/payment-intents/cancel"
         headers = {"Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}"}
         r = requests.post(url, headers=headers)
         print(f"🔄 Limpeza da maquininha: {r.status_code}")
