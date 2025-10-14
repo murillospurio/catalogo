@@ -129,7 +129,7 @@ def webhook():
 
         print("Body:", data)
 
-        # Tenta extrair o payment_id
+        # Extrai o ID do pagamento
         payment_id = request.args.get("id") or data.get("id") or data.get("data", {}).get("id")
         if not payment_id:
             print("⚠️ Nenhum ID de pagamento encontrado.")
@@ -145,12 +145,21 @@ def webhook():
         print(f"💳 Status do pagamento {payment_id}: {status}")
 
         if status == "approved":
-            # Evita duplicar o mesmo pedido
-            if payment_id not in [p.get("id") for p in pedidos_aprovados]:
-                pedidos_aprovados.append(info)
-                print("✅ Pagamento aprovado e adicionado à fila do ESP32.")
+            external_ref = info.get("external_reference")
+            print(f"🧾 Pagamento aprovado! External reference: {external_ref}")
+
+            # Cria um pedido genérico (se não estiver em pedidos_aprovados)
+            if not any(p.get("order_id") == external_ref for p in pedidos_aprovados):
+                novo_pedido = {
+                    "order_id": external_ref or str(payment_id),
+                    "pedido": [{"id": 1, "quantidade": 1}],
+                    "total": info.get("transaction_amount", 0),
+                    "liberado": False
+                }
+                pedidos_aprovados.append(novo_pedido)
+                print(f"✅ Pedido criado automaticamente e adicionado à fila do ESP32: {novo_pedido}")
             else:
-                print("⚠️ Pagamento já existente na fila, ignorando duplicata.")
+                print("⚠️ Pedido já existente na fila, ignorando duplicata.")
 
         return jsonify({"status": "received"}), 200
 
