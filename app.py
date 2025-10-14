@@ -94,48 +94,42 @@ def receber_pedido():
         return jsonify({"erro": str(e)}), 500
 
 # === ROTA: WEBHOOK DO MERCADO PAGO ===
-@app.route("/webhook", methods=["POST", "GET"])
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    try:
-        print("\n📩 Webhook recebido!")
-        data = request.get_json(force=True, silent=True) or {}
-        payment_id = request.args.get("id") or data.get("id") or data.get("data", {}).get("id")
-        if not payment_id:
-            print("⚠️ Nenhum ID encontrado.")
-            return jsonify({"status": "ignored"}), 200
+    info = request.json
+    print("📩 Webhook recebido!")
+    print(json.dumps(info, indent=2))
 
-        info = verificar_pagamento(payment_id)
-        if not info:
-            return jsonify({"status": "error", "msg": "falha ao consultar pagamento"}), 500
+    payment_id = info.get("data", {}).get("id")
+    topic = info.get("topic")
 
+    if topic == "point_integration_ipn":
         status = info.get("status")
-        order_ref = info.get("external_reference")
-        print(f"💳 Pagamento {payment_id} status={status} ref={order_ref}")
+        order_ref = None
+        print(f"💳 Pagamento {payment_id} status={status}")
 
-        if status == "approved" and order_ref in pedidos_pendentes:
-            pedido = pedidos_pendentes.pop(order_ref)
-            limpar_pagamento_maquininha("8701372447323147")
+        if status == "approved":
+            # Pega o último pedido pendente (já que só processamos um por vez)
+            if pedidos_pendentes:
+                order_ref, pedido = pedidos_pendentes.popitem()
+                limpar_pagamento_maquininha(POS_EXTERNAL_ID)
 
-            payload_esp = [{"id": idx + 1, "quantidade": item["qty"]} for idx, item in enumerate(pedido["itens"])]
-            pedidos_aprovados.append({
-                "order_id": order_ref,
-                "pedido": payload_esp,
-                "total": pedido["total"],
-                "liberado": False
-            })
+                payload_esp = [{"id": idx + 1, "quantidade": item["qty"]} for idx, item in enumerate(pedido["itens"])]
+                pedidos_aprovados.append({
+                    "order_id": order_ref,
+                    "pedido": payload_esp,
+                    "total": pedido["total"],
+                    "liberado": False
+                })
 
-            print(f"✅ Pedido {order_ref} aprovado e enviado para fila do ESP32.")
-            try:
-                r = requests.get(ESP32_URL, timeout=5)
-                print("📡 ESP32 notificado:", r.status_code)
-            except Exception as e:
-                print("⚠️ Falha ao notificar ESP32:", e)
+                print(f"✅ Pedido {order_ref} aprovado e enviado para fila do ESP32.")
+                try:
+                    r = requests.get(ESP32_URL, timeout=5)
+                    print("📡 ESP32 notificado:", r.status_code)
+                except Exception as e:
+                    print("⚠️ Falha ao notificar ESP32:", e)
 
-        return jsonify({"status": "ok"}), 200
-
-    except Exception as e:
-        print("❌ Erro no webhook:", e)
-        return jsonify({"erro": str(e)}), 500
+    return jsonify({"status": "ok"})
 
 # === ROTA: ESP CONSULTA PEDIDOS ===
 @app.route("/esp_pedido", methods=["GET"])
