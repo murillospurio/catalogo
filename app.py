@@ -18,6 +18,9 @@ pedidos_pendentes = {}
 
 # === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA ===
 def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
+    # cancelar qualquer pagamento pendente antes
+    limpar_pagamento_maquininha(POS_EXTERNAL_ID)
+
     url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
     headers = {"Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}", "Content-Type": "application/json"}
 
