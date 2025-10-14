@@ -96,25 +96,25 @@ def receber_pedido():
         print("Erro ao processar pedido:", e)
         return jsonify({"erro": str(e)}), 500
 
-# === ROTA: WEBHOOK DO MERCADO PAGO ===
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    info = request.json
+    info = request.json or {}
+    # também pega da query string caso venha assim
+    payment_id = info.get("data", {}).get("id") or request.args.get("id") or info.get("resource")
+    topic = info.get("topic") or request.args.get("topic")
+
     print("📩 Webhook recebido!")
     print(json.dumps(info, indent=2))
-
-    # Pega o payment_id de forma segura
-    payment_id = info.get("data", {}).get("id") or info.get("id")
-    topic = info.get("topic")
+    print("🔹 Payment ID:", payment_id)
+    print("🔹 Topic:", topic)
 
     if payment_id:
-        # Consulta o status real do pagamento na API
+        # Consulta status real do pagamento
         payment_info = verificar_pagamento(payment_id)
         status = payment_info.get("status") if payment_info else None
         print(f"💳 Pagamento {payment_id} status={status}")
 
         if status == "approved":
-            # Pega o último pedido pendente
             if pedidos_pendentes:
                 order_ref, pedido = pedidos_pendentes.popitem()
                 limpar_pagamento_maquininha(POS_EXTERNAL_ID)
@@ -135,6 +135,7 @@ def webhook():
                     print("⚠️ Falha ao notificar ESP32:", e)
 
     return jsonify({"status": "ok"})
+
 
 # === ROTA: ESP CONSULTA PEDIDOS ===
 @app.route("/esp_pedido", methods=["GET"])
