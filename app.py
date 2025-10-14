@@ -85,6 +85,7 @@ def receber_pedido():
             "itens": itens,
             "total": total,
             "status": "pending"
+            "payment_id": pagamento.get("id")  
         }
 
         return jsonify({"status": "created", "order_id": order_id}), 200
@@ -103,8 +104,10 @@ def webhook():
     payment_id = info.get("data", {}).get("id")
     topic = info.get("topic")
 
-    if topic == "point_integration_ipn":
-        status = info.get("status")
+    if topic == "point_integration_ipn" and payment_id:
+        # Consulta o status real do pagamento na API
+        payment_info = verificar_pagamento(payment_id)
+        status = payment_info.get("status") if payment_info else None
         order_ref = None
         print(f"💳 Pagamento {payment_id} status={status}")
 
