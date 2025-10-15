@@ -96,10 +96,10 @@ def receber_pedido():
         print("Erro ao processar pedido:", e)
         return jsonify({"erro": str(e)}), 500
 
+# === ROTA: WEBHOOK - RECEBIMENTO DE STATUS DE PAGAMENTO ===
 @app.route("/webhook", methods=["POST"])
 def webhook():
     info = request.json or {}
-    # também pega da query string caso venha assim
     payment_id = info.get("data", {}).get("id") or request.args.get("id") or info.get("resource")
     topic = info.get("topic") or request.args.get("topic")
 
@@ -109,21 +109,32 @@ def webhook():
     print("🔹 Topic:", topic)
 
     if payment_id:
-        # Consulta status real do pagamento
         payment_info = verificar_pagamento(payment_id)
         status = payment_info.get("status") if payment_info else None
         print(f"💳 Pagamento {payment_id} status={status}")
 
         if status == "approved":
-            if pedidos_pendentes:
-                order_ref, pedido = pedidos_pendentes.popitem()
+            # Procurar o pedido correspondente ao payment_id
+            pedido_encontrado = None
+            order_ref = None
+            for oid, p in pedidos_pendentes.items():
+                if p.get("payment_id") == payment_id:
+                    pedido_encontrado = p
+                    order_ref = oid
+                    break
+
+            if pedido_encontrado:
+                # Remove do pendente
+                pedidos_pendentes.pop(order_ref)
                 limpar_pagamento_maquininha(POS_EXTERNAL_ID)
 
-                payload_esp = [{"id": idx + 1, "quantidade": item["qty"]} for idx, item in enumerate(pedido["itens"])]
+                # Cria payload correto para ESP
+                payload_esp = [{"id": item["id"], "quantidade": item["qty"]} for item in pedido_encontrado["itens"]]
+
                 pedidos_aprovados.append({
                     "order_id": order_ref,
                     "pedido": payload_esp,
-                    "total": pedido["total"],
+                    "total": pedido_encontrado["total"],
                     "liberado": False
                 })
 
@@ -133,6 +144,8 @@ def webhook():
                     print("📡 ESP32 notificado:", r.status_code)
                 except Exception as e:
                     print("⚠️ Falha ao notificar ESP32:", e)
+            else:
+                print("⚠️ Payment aprovado, mas pedido não encontrado nos pendentes.")
 
     return jsonify({"status": "ok"})
 
