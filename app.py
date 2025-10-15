@@ -40,7 +40,7 @@ NOME_MAP = {
 }
 
 # === FUNÇÕES AUXILIARES ===
-def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
+def criar_pagamento_maquininha(amount_cents, descricao="Pedido", order_id=None):
     limpar_pagamento_maquininha(POS_EXTERNAL_ID)
     url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
     headers = {
@@ -48,7 +48,7 @@ def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
         "Content-Type": "application/json"
     }
     payload = {
-        "transaction_amount": amount_cents / 100,
+        "transaction_amount": amount_cents / 100,  # converte centavos para reais
         "description": descricao,
         "payment_method_id": "card",
         "external_reference": order_id  # <- referência única
@@ -68,6 +68,7 @@ def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
     except Exception as e:
         print("Erro ao criar pagamento:", e)
         return None
+
 
 def limpar_pagamento_maquininha(serial_number):
     try:
