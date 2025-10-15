@@ -17,14 +17,14 @@ pedidos_pendentes = {}
 
 # Mapeamento de ID para pino do ESP32
 ID_MAP = {
-    1: 15,
-    2: 18,
-    3: 19,
-    4: 21,
-    5: 22,
-    6: 23,
-    7: 13,
-    8: 12
+    15: 1,
+    18: 2,
+    19: 3,
+    21: 4,
+    22: 5,
+    23: 6,
+    13: 7,
+    12: 8
 }
 
 # Fallback caso o item não tenha 'id', usar pelo nome
