@@ -94,27 +94,81 @@ def receber_pedido():
         descricao = ", ".join([f"{i.get('name','item')} x{i.get('qty',1)}" for i in itens])
         print(f"🛒 Novo pedido {order_id}: {descricao} | Total R$ {total}")
 
-        # Cria pagamento na maquininha
+        # Cria pagamento
         pagamento = criar_pagamento_maquininha(total * 100, descricao, order_id)
         if not pagamento or "id" not in pagamento:
             return jsonify({"erro": "Falha ao criar pagamento"}), 500
 
-        # ✅ Salva pedido pendente usando order_id como chave, incluindo payment_id dentro do dicionário
+        payment_id = str(pagamento["id"])
+
+        # Salva pedido pendente usando order_id como chave, mas inclui payment_id
         pedidos_pendentes[order_id] = {
             "order_id": order_id,
             "itens": itens,
             "total": total,
             "status": "pending",
-            "payment_id": pagamento.get("id")
+            "payment_id": payment_id
         }
 
-        print(f"📝 Pedido pendente salvo: {order_id} | payment_id={pagamento.get('id')}")
+        print(f"📝 Pedido pendente salvo: {order_id} | payment_id={payment_id}")
 
-        return jsonify({"status": "created", "order_id": order_id, "payment_id": pagamento.get("id")}), 200
+        return jsonify({"status": "created", "order_id": order_id, "payment_id": payment_id}), 200
 
     except Exception as e:
         print("Erro ao processar pedido:", e)
         return jsonify({"erro": str(e)}), 500
+
+
+# === ROTA: WEBHOOK DE PAGAMENTO ===
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    info = request.json or {}
+    payment_id = info.get("data", {}).get("id") or request.args.get("id") or info.get("resource")
+    topic = info.get("topic") or request.args.get("topic")
+
+    print("📩 Webhook recebido!")
+    print(json.dumps(info, indent=2))
+    print("🔹 Payment ID:", payment_id)
+    print("🔹 Topic:", topic)
+
+    if payment_id:
+        # Consulta status real do pagamento
+        payment_info = verificar_pagamento(payment_id)
+        status = payment_info.get("status") if payment_info else None
+        print(f"💳 Pagamento {payment_id} status={status}")
+
+        if status == "approved":
+            # Procura pedido no dicionário pelo payment_id
+            pedido_encontrado = None
+            order_ref = None
+            for key, pedido in pedidos_pendentes.items():
+                if str(pedido.get("payment_id")) == str(payment_id):
+                    pedido_encontrado = pedidos_pendentes.pop(key)
+                    order_ref = key
+                    break
+
+            if pedido_encontrado:
+                limpar_pagamento_maquininha(POS_EXTERNAL_ID)
+
+                # Cria payload para ESP32 usando ID_MAP ou NOME_MAP
+                payload_esp = []
+                for item in pedido_encontrado["itens"]:
+                    pid = item.get("id") or NOME_MAP.get(item.get("name"), 1)
+                    payload_esp.append({"id": pid, "quantidade": item.get("qty",1)})
+
+                pedidos_aprovados.append({
+                    "order_id": order_ref,
+                    "pedido": payload_esp,
+                    "total": pedido_encontrado["total"],
+                    "liberado": False
+                })
+
+                print(f"✅ Pedido {order_ref} aprovado e enviado para fila do ESP32.")
+                print("➡️ Payload ESP32:", json.dumps(payload_esp, indent=2))
+            else:
+                print("⚠️ Payment aprovado, mas pedido não encontrado nos pendentes.")
+
+    return jsonify({"status": "ok"})
 
 # === ROTA: WEBHOOK DE PAGAMENTO ===
 @app.route("/webhook", methods=["POST"])
