@@ -63,6 +63,16 @@ def verificar_pagamento(payment_id):
     resp = requests.get(url, headers=headers)
     return resp.json() if resp.ok else None
 
+ID_MAP = {
+    1: 15,  # Produto 1 → rele/pino 
+    2: 18,
+    3: 19,
+    4: 21,
+    5: 22,
+    6: 23,
+    7: 13,
+    8: 12,
+
 # === ROTA: RECEBER PEDIDO DO CATÁLOGO ===
 @app.route("/pedido", methods=["POST"])
 def receber_pedido():
@@ -102,7 +112,8 @@ def receber_pedido():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     info = request.json or {}
-    # também pega da query string caso venha assim
+    
+    # Captura o payment_id corretamente
     payment_id = info.get("data", {}).get("id") or request.args.get("id") or info.get("resource")
     topic = info.get("topic") or request.args.get("topic")
 
@@ -112,35 +123,50 @@ def webhook():
     print("🔹 Topic:", topic)
 
     if payment_id:
-        # Consulta status real do pagamento
         payment_info = verificar_pagamento(payment_id)
         status = payment_info.get("status") if payment_info else None
         print(f"💳 Pagamento {payment_id} status={status}")
 
         if status == "approved":
-            if pedidos_pendentes:
-                order_ref, pedido = pedidos_pendentes.popitem()
+            # Procura o pedido correspondente ao payment_id
+            pedido_encontrado = None
+            order_ref = None
+            for oid, p in pedidos_pendentes.items():
+                if p.get("payment_id") == payment_id:
+                    pedido_encontrado = p
+                    order_ref = oid
+                    break
+
+            if pedido_encontrado:
+                # Remove do pendente
+                pedidos_pendentes.pop(order_ref)
+                
+                # Limpa pagamento da maquininha
                 limpar_pagamento_maquininha(POS_EXTERNAL_ID)
 
-                payload_esp = [{"id": idx + 1, "quantidade": item["qty"]} for idx, item in enumerate(pedido["itens"])]
+                # === CRIA PAYLOAD PARA ESP32 COM MAPA DE IDS ===
+                payload_esp = [
+                    {"id": ID_MAP.get(item["id"], 1), "quantidade": item["qty"]}
+                    for item in pedido_encontrado["itens"]
+                ]
 
+                # Adiciona pedido aprovado na fila
                 pedidos_aprovados.append({
                     "order_id": order_ref,
                     "pedido": payload_esp,
-                    "total": pedido["total"],
+                    "total": pedido_encontrado["total"],
                     "liberado": False
                 })
 
                 print(f"✅ Pedido {order_ref} aprovado e enviado para fila do ESP32.")
+                print("➡️ Payload ESP32:", payload_esp)
 
-                try:
-                    r = requests.get(ESP32_URL, timeout=5)
-                    print("📡 ESP32 notificado:", r.status_code)
-                except Exception as e:
-                    print("⚠️ Falha ao notificar ESP32:", e)
+                # ❌ Não tentar notificar ESP32 diretamente se estiver no Heroku
+                # ESP32 já vai consultar /esp_pedido periodicamente
+            else:
+                print("⚠️ Payment aprovado, mas pedido não encontrado nos pendentes.")
 
     return jsonify({"status": "ok"})
-
 # === ROTA: ESP CONSULTA PEDIDOS ===
 @app.route("/esp_pedido", methods=["GET"])
 def esp_pedido():
