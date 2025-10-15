@@ -63,38 +63,47 @@ def verificar_pagamento(payment_id):
 
 # === ROTA: RECEBER PEDIDO DO CATÁLOGO ===
 @app.route("/pedido", methods=["POST"])
-def receber_pedido():
+def criar_pedido():
+    data = request.json or {}
+    itens = data.get("items", [])
+    total = data.get("total", 0.0)
+    
+    if not itens:
+        return jsonify({"status": "erro", "mensagem": "Nenhum item enviado"}), 400
+
+    # Gera um ID único para o pedido
+    order_ref = "PED-" + str(int(time.time()*1000))
+
+    # Cria descrição para a maquininha
+    descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
+
+    # === Cria pagamento na maquininha ===
     try:
-        data = request.get_json()
-        itens = data.get("items", [])
-        total = float(data.get("total", 0))
-        order_id = data.get("order_id")
-
-        if not total or not itens:
-            return jsonify({"erro": "Pedido inválido"}), 400
-
-        descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
-        print(f"🛒 Novo pedido {order_id}: {descricao} | Total R$ {total}")
-
-        # Cria o pagamento na maquininha
-        pagamento = criar_pagamento_maquininha(total * 100, descricao, order_id)
-        if not pagamento:
-            return jsonify({"erro": "Falha ao criar pagamento"}), 500
-
-        # Guarda o pedido pendente incluindo o payment_id corretamente
-        pedidos_pendentes[order_id] = {
-            "order_id": order_id,
-            "itens": itens,
-            "total": total,
-            "status": "pending",
-            "payment_id": pagamento.get("id")  # ✅ Corrigido: dentro do dicionário
-        }
-
-        return jsonify({"status": "created", "order_id": order_id}), 200
-
+        pagamento = criar_pagamento_maquininha(total, descricao, POS_EXTERNAL_ID)
+        payment_id = pagamento.get("id")
+        print(f"💳 Pagamento criado na maquininha! Payment ID: {payment_id}")
     except Exception as e:
-        print("Erro ao processar pedido:", e)
-        return jsonify({"erro": str(e)}), 500
+        print("⚠️ Erro ao criar pagamento na maquininha:", e)
+        return jsonify({"status": "erro", "mensagem": "Falha ao criar pagamento"}), 500
+
+    # === Salva o pedido nos pendentes, incluindo payment_id ===
+    pedidos_pendentes[order_ref] = {
+        "itens": itens,
+        "total": total,
+        "payment_id": payment_id
+    }
+
+    print(f"📝 Pedido salvo em pendentes: {order_ref}")
+    print(json.dumps(pedidos_pendentes[order_ref], indent=2))
+
+    # Retorna info básica para o frontend
+    return jsonify({
+        "status": "ok",
+        "order_id": order_ref,
+        "payment_id": payment_id,
+        "total": total
+    }), 200
+
 
 # === ROTA: WEBHOOK - RECEBIMENTO DE STATUS DE PAGAMENTO ===
 @app.route("/webhook", methods=["POST"])
