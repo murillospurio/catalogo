@@ -25,7 +25,7 @@ ID_MAP = {
     5: 22,
     6: 23,
     7: 13,
-    8: 12,
+    8: 12
 }
 
 # Fallback caso o item não tenha 'id', usar pelo nome
