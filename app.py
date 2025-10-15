@@ -140,7 +140,20 @@ def webhook():
                 order_ref, pedido = pedidos_pendentes.popitem()
                 limpar_pagamento_maquininha(POS_EXTERNAL_ID)
 
-                payload_esp = [{"id": idx + 1, "quantidade": item["qty"]} for idx, item in enumerate(pedido["itens"])]
+                payload_esp = []
+                for item in pedido["itens"]:
+                   prod_id = item.get("id")
+                   if prod_id and prod_id in ID_MAP:
+                      rele_id = ID_MAP[prod_id]
+                   else:
+        # fallback pelo nome
+                     rele_id = NOME_MAP.get(item["name"].lower(), 0)  # 0 = inválido
+
+                   payload_esp.append({
+                       "id": rele_id,
+                       "quantidade": item["qty"]
+                })
+
 
                 pedidos_aprovados.append({
                     "order_id": order_ref,
