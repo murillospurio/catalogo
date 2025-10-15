@@ -72,6 +72,7 @@ ID_MAP = {
     6: 23,
     7: 13,
     8: 12,
+}
 
 # === ROTA: RECEBER PEDIDO DO CATÁLOGO ===
 @app.route("/pedido", methods=["POST"])
@@ -149,6 +150,8 @@ def webhook():
                     {"id": ID_MAP.get(item["id"], 1), "quantidade": item["qty"]}
                     for item in pedido_encontrado["itens"]
                 ]
+
+                print("➡️ Payload ESP32 que será enviado:", json.dumps(payload_esp, indent=2))
 
                 # Adiciona pedido aprovado na fila
                 pedidos_aprovados.append({
