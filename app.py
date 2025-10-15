@@ -17,14 +17,14 @@ pedidos_pendentes = {}
 
 # Mapeamento de ID para pino do ESP32
 ID_MAP = {
-    15: 1,
-    18: 2,
-    19: 3,
-    21: 4,
-    22: 5,
-    23: 6,
-    13: 7,
-    12: 8
+    1: 15,  # Produto 1 (Brahma) → Pino 15
+    2: 18,  # Produto 2 (Skol) → Pino 18
+    3: 19,  # Produto 3 (Coca-Cola) → Pino 19
+    4: 21,  # Produto 4 (Coca-Cola zero) → Pino 21
+    5: 22,  # Produto 5 (Sprite) → Pino 22
+    6: 23,  # Produto 6 (Energético) → Pino 23
+    7: 13,  # Produto 7 (Água sem gás) → Pino 13
+    8: 12   # Produto 8 (Original) → Pino 12
 }
 
 # Fallback caso o item não tenha 'id', usar pelo nome
@@ -140,19 +140,23 @@ def webhook():
                 order_ref, pedido = pedidos_pendentes.popitem()
                 limpar_pagamento_maquininha(POS_EXTERNAL_ID)
 
-                payload_esp = []
-                for item in pedido["itens"]:
-                   prod_id = item.get("id")
-                   if prod_id and prod_id in ID_MAP:
-                      rele_id = ID_MAP[prod_id]
-                   else:
-        # fallback pelo nome
-                     rele_id = NOME_MAP.get(item["name"].lower(), 0)  # 0 = inválido
+payload_esp = []
 
-                   payload_esp.append({
-                       "id": rele_id,
-                       "quantidade": item["qty"]
-                })
+for item in pedido["itens"]:
+    prod_id = item.get("id")
+
+    if prod_id and prod_id in ID_MAP:
+        rele_id = ID_MAP[prod_id]
+    else:
+        # fallback pelo nome
+        nome_item = item.get("name", "").strip().lower()
+        rele_id = NOME_MAP.get(nome_item, 0)  # 0 = inválido
+
+    payload_esp.append({
+        "id": rele_id,
+        "quantidade": item["qty"]
+    })
+
 
 
                 pedidos_aprovados.append({
