@@ -29,14 +29,14 @@ ID_MAP = {
 
 # Fallback caso o item não tenha 'id', usar pelo nome
 NOME_MAP = {
-    15: "brahma",
-    18: "skol",
-    19:"coca_cola",
-    21: "coca_cola_zero",
-    22: "sprite",
-    23: "energetico",
-    13: "agua",
-    12: "original",
+    15: "Brahma",
+    18: "Skol",
+    19: "Coca_Cola",
+    21: "Coca_Cola zero",
+    22: "Sprite",
+    23: "Energético",
+    13: "Água sem gás",
+    12: "Original",
 }
 
 # === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA ===
