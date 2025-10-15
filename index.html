@@ -21,19 +21,7 @@ h1 { text-align:center; color:#fff; text-shadow:1px 1px 5px rgba(0,0,0,0.7); mar
 .carrinho button { padding:12px 24px; font-size:18px; border-radius:8px; margin-top:5px; }
 
 /* Overlay */
-#overlay {
-  display:none; 
-  position:fixed; 
-  top:0; left:0; width:100%; height:100%; 
-  background:rgba(0,0,0,0.95); 
-  color:#fff; 
-  z-index:9999; 
-  text-align:center; 
-  padding-top:50px; 
-  box-sizing:border-box; 
-  opacity:0; 
-  transition: opacity 0.5s;
-}
+#overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); color:#fff; z-index:9999; text-align:center; padding-top:50px; box-sizing:border-box; opacity:0; transition: opacity 0.5s; }
 #overlay.show { display:block; opacity:1; }
 #overlay h2 { margin-bottom:20px; font-size:28px; }
 #overlay div { margin-bottom:15px; font-size:20px; }
@@ -84,7 +72,7 @@ function mostrarProdutos() {
     prodDiv.className='produto';
     prodDiv.innerHTML=`
       <img src="${p.img}" alt="${p.nome}">
-      <div><b>${p.nome}</b><br>R$ ${p.preco.toFixed(2)}<br>Estoque: ${p.estoque}</div>
+      <div><b>${p.nome}</b><br>R$ ${p.preco.toFixed(2)}<br>Estoque: <span id="estoque-${p.id}">${p.estoque}</span></div>
       <div>
         <button onclick="alterarQuantidade(${p.id}, -1)">-</button>
         <span id="qtd-${p.id}">0</span>
@@ -97,13 +85,23 @@ function mostrarProdutos() {
 
 // Alterar quantidade
 function alterarQuantidade(id, delta) {
+  const produto = produtos.find(p => p.id === id);
   if(!carrinho[id]) carrinho[id]=0;
-  const produto=produtos.find(p=>p.id===id);
-  let novaQtd=carrinho[id]+delta;
-  if(novaQtd<0) novaQtd=0;
-  if(novaQtd>produto.estoque) novaQtd=produto.estoque;
-  carrinho[id]=novaQtd;
-  document.getElementById(`qtd-${id}`).innerText=novaQtd;
+
+  let novaQtd = carrinho[id] + delta;
+
+  if(novaQtd < 0) novaQtd = 0;
+  if(novaQtd > produto.estoque) novaQtd = produto.estoque;
+
+  let diff = novaQtd - carrinho[id];
+  produto.estoque -= diff;
+  if(produto.estoque < 0) produto.estoque = 0;
+
+  carrinho[id] = novaQtd;
+
+  document.getElementById(`qtd-${id}`).innerText = novaQtd;
+  document.getElementById(`estoque-${id}`).innerText = produto.estoque;
+
   atualizarCarrinho();
   resetTimerLimpeza();
 }
@@ -127,6 +125,14 @@ function atualizarCarrinho() {
 
 // Cancelar pedido
 function cancelarPedido(){
+  for(let id in carrinho){
+    const qtd = carrinho[id];
+    if(qtd>0){
+      const produto = produtos.find(p=>p.id==id);
+      produto.estoque += qtd;
+      document.getElementById(`estoque-${id}`).innerText = produto.estoque;
+    }
+  }
   carrinho={};
   mostrarProdutos();
   atualizarCarrinho();
@@ -148,10 +154,10 @@ function destacarCentral() {
   produtosDivs[0].classList.add('central');
 }
 
-// ----- OVERLAY -----
+// Overlay
 const overlay=document.getElementById('overlay');
 const overlayItens=document.getElementById('overlayItens');
-let overlayTimer = null; // Timer para fechar overlay automaticamente
+let overlayTimer = null;
 
 document.getElementById('verPedidoBtn').addEventListener('click',()=>{
   overlayItens.innerHTML='';
@@ -169,11 +175,8 @@ document.getElementById('verPedidoBtn').addEventListener('click',()=>{
   
   overlay.classList.add('show');
 
-  // Fecha automaticamente após 10 segundos
   if(overlayTimer) clearTimeout(overlayTimer);
-  overlayTimer = setTimeout(()=>{
-    fecharOverlay();
-  },10000); // 10 segundos
+  overlayTimer = setTimeout(()=>{ fecharOverlay(); },10000);
 });
 
 function fecharOverlay(){
@@ -181,16 +184,15 @@ function fecharOverlay(){
   if(overlayTimer) { clearTimeout(overlayTimer); overlayTimer = null; }
 }
 
-// ----- CONFIRMAR PEDIDO NO OVERLAY -----
+// Confirmar pedido
 document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
-  overlayItens.innerHTML = "⏳ Aperte o botão verde para continuar, obrigada!";
   const items = [];
   let total = 0;
   for (let id in carrinho) {
     const qtd = carrinho[id];
     if (qtd > 0) {
       const p = produtos.find(prod => prod.id == id);
-      items.push({ name: p.nome.toLowerCase().replace(/\s/g, "_"), qty: qtd });
+      items.push({ id: p.id, name: p.nome.toLowerCase().replace(/\s/g, "_"), qty: qtd });
       total += p.preco * qtd;
     }
   }
@@ -202,40 +204,29 @@ document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pedido)
   })
-  .then(async resp => {
-    let data;
-    try { data = await resp.json(); } catch (e) { data = { status: "ok" }; }
-
-    if (resp.ok) {
-      setTimeout(() => {
-        overlayItens.innerHTML = "✅ Aperte o botão verde da máquina para continuar.";
-        setTimeout(() => {
-          fecharOverlay();
-          cancelarPedido();
-        }, 3000);
-      }, 1000);
+  .then(resp=>{
+    if(resp.ok){
+      carrinho={};
+      atualizarCarrinho();
+      alert("✅ Pedido enviado! Aperte o botão verde da máquina para continuar.");
     } else {
-      const texto = await resp.text();
-      overlayItens.innerHTML = `❌ Erro ao enviar pedido! Status: ${resp.status}`;
-      console.error("Erro do servidor:", texto);
+      cancelarPedido();
+      alert("❌ Erro ao enviar pedido! Estoque restaurado.");
     }
   })
-  .catch(err => {
-    overlayItens.innerHTML = "❌ Erro ao enviar pedido! Verifique console.";
+  .catch(err=>{
+    cancelarPedido();
     console.error("Erro no fetch:", err);
   });
 
   resetTimerLimpeza();
 });
 
-
-// Timer de limpeza
+// Timer de limpeza automática
 function resetTimerLimpeza(){
   if(timerLimpeza) clearTimeout(timerLimpeza);
   timerLimpeza=setTimeout(()=>{
-    carrinho={};
-    mostrarProdutos();
-    atualizarCarrinho();
+    cancelarPedido();
     console.log("Carrinho limpo por inatividade");
   },180000);
 }
