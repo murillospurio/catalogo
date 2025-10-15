@@ -145,7 +145,7 @@ def webhook():
                     prod_id = item.get("id")
 
                     if prod_id and prod_id in ID_MAP:
-                        rele_id = ID_MAP[prod_id]
+                        rele_id = prod_id
                     else:
                         # fallback pelo nome
                         nome_item = item.get("name", "").strip().lower()
