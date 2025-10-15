@@ -4,29 +4,148 @@
 <meta charset="UTF-8">
 <title>Convêniencia Machine</title>
 <style>
-body { font-family: Arial; margin:0; padding:0; background: url('fundo.png') no-repeat center center fixed; background-size: cover; overflow-x: hidden; }
-h1 { text-align:center; color:#fff; text-shadow:1px 1px 5px rgba(0,0,0,0.7); margin-top:20px; }
-#produtos { display:flex; overflow-x:auto; scroll-snap-type: x mandatory; padding:50px; gap:20px; justify-content:flex-start; scrollbar-width:none; }
+body {
+  font-family: Arial; margin:0; padding:0;
+  background: url('fundo.png') no-repeat center center fixed; 
+  background-size: cover; 
+  overflow-x: hidden;
+}
+
+h1 {
+  text-align:center; 
+  color:#fff; 
+  text-shadow:1px 1px 5px rgba(0,0,0,0.7); 
+  margin-top:20px;
+}
+
+#produtos {
+  display:flex; 
+  flex-wrap: nowrap; 
+  overflow-x:auto; 
+  scroll-snap-type: x mandatory; 
+  padding:40px 20px; 
+  gap:20px; 
+  justify-content:center;
+}
+
 #produtos::-webkit-scrollbar { display:none; }
-.produto { flex:0 0 250px; height:380px; scroll-snap-align:center; border-radius:15px; background:rgba(255,255,255,0.9); box-shadow:0 6px 10px rgba(0,0,0,0.3); display:flex; flex-direction:column; align-items:center; justify-content:space-between; transition: transform 0.3s, opacity 0.3s; padding:15px; box-sizing:border-box; }
-.produto img { width:auto; height:400px; object-fit:contain; }
-.produto div { font-size:18px; }
-.produto button { padding:8px 16px; margin:4px; cursor:pointer; border:none; border-radius:5px; background-color:#007bff; color:#fff; font-size:16px; }
+
+.produto {
+  flex:0 0 280px;
+  scroll-snap-align:center;
+  border-radius:15px;
+  background:rgba(255,255,255,0.95);
+  box-shadow:0 6px 12px rgba(0,0,0,0.3);
+  display:flex; 
+  flex-direction:column; 
+  align-items:center; 
+  justify-content:space-between; 
+  padding:20px;
+  box-sizing:border-box;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+.produto img {
+  width: 100%;
+  height: 300px;
+  object-fit: contain;
+  margin-bottom: 15px;
+}
+
+.produto div { font-size:20px; text-align:center; margin-bottom:10px; }
+
+.produto button {
+  padding:12px 20px; 
+  margin:4px; 
+  cursor:pointer; 
+  border:none; 
+  border-radius:8px; 
+  background-color:#007bff; 
+  color:#fff; 
+  font-size:18px; 
+  font-weight:bold;
+}
+
 .produto button:hover { background-color:#0056b3; }
+
 .produto.central { transform:scale(1.1); opacity:1; z-index:10; }
-.produto:not(.central) { transform:scale(0.85); opacity:0.6; z-index:1; }
-.carrinho { position:fixed; bottom:20px; right:20px; border:2px solid #000; padding:25px; background:rgba(255,255,255,0.9); border-radius:15px; width:540px; height:540px; text-align:center; z-index:100; box-shadow:0 6px 12px rgba(0,0,0,0.3); display:flex; flex-direction:column; justify-content:space-between; font-size:18px; }
-.carrinho img { width:200px; height:200px; margin:0 auto 15px auto; }
-#itensCarrinho { flex-grow:1; overflow-y:auto; font-size:16px; margin-bottom:15px; }
-.carrinho button { padding:12px 24px; font-size:18px; border-radius:8px; margin-top:5px; }
+.produto:not(.central) { transform:scale(0.9); opacity:0.7; z-index:1; }
+
+/* Carrinho */
+.carrinho {
+  position:fixed; 
+  bottom:20px; 
+  right:20px; 
+  border:2px solid #000; 
+  padding:20px; 
+  background:rgba(255,255,255,0.9); 
+  border-radius:15px; 
+  width:400px; 
+  height:450px; 
+  text-align:center; 
+  z-index:100; 
+  box-shadow:0 6px 12px rgba(0,0,0,0.3); 
+  display:flex; 
+  flex-direction:column; 
+  justify-content:space-between; 
+  font-size:18px;
+}
+
+.carrinho img {
+  width:100px; 
+  height:100px; 
+  margin:0 auto 15px auto;
+}
+
+.carrinho button {
+  padding:14px 28px;
+  font-size:20px; 
+  font-weight:bold;
+  border-radius:10px;
+  margin-top:5px;
+  cursor:pointer;
+  background-color:#007bff;
+  color:#fff;
+  border:none;
+}
+
+.carrinho button:hover { background-color:#0056b3; }
+
+#itensCarrinho { flex-grow:1; overflow-y:auto; font-size:18px; margin-bottom:15px; text-align:left; }
 
 /* Overlay */
-#overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); color:#fff; z-index:9999; text-align:center; padding-top:50px; box-sizing:border-box; opacity:0; transition: opacity 0.5s; }
+#overlay {
+  display:none; 
+  position:fixed; 
+  top:0; left:0; width:100%; height:100%; 
+  background:rgba(0,0,0,0.95); 
+  color:#fff; 
+  z-index:9999; 
+  text-align:center; 
+  padding-top:50px; 
+  box-sizing:border-box; 
+  opacity:0; 
+  transition: opacity 0.5s;
+}
+
 #overlay.show { display:block; opacity:1; }
 #overlay h2 { margin-bottom:20px; font-size:28px; }
-#overlay div { margin-bottom:15px; font-size:20px; }
-#overlay button { margin:10px; padding:14px 28px; font-size:20px; border-radius:10px; cursor:pointer; background-color:#007bff; border:none; color:#fff; transition: background 0.3s; }
+#overlay div { margin-bottom:15px; font-size:22px; }
+#overlay button { margin:10px; padding:14px 28px; font-size:22px; font-weight:bold; border-radius:10px; cursor:pointer; background-color:#007bff; border:none; color:#fff; transition: background 0.3s; }
 #overlay button:hover { background-color:#0056b3; }
+
+/* Responsivo */
+@media (max-width:600px){
+  #produtos { padding:30px 10px; gap:15px; }
+  .produto { flex:0 0 80%; padding:15px; }
+  .produto img { height:250px; }
+  .produto div { font-size:18px; }
+  .produto button { font-size:16px; padding:10px 18px; }
+  .carrinho { width:90%; height:400px; bottom:10px; right:5%; padding:15px; }
+  .carrinho button { font-size:18px; padding:12px 24px; }
+  #overlay div { font-size:20px; }
+  #overlay button { font-size:20px; padding:12px 24px; }
+}
 </style>
 </head>
 <body>
