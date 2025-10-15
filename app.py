@@ -170,51 +170,6 @@ def webhook():
 
     return jsonify({"status": "ok"})
 
-# === ROTA: WEBHOOK DE PAGAMENTO ===
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    info = request.json or {}
-    payment_id = str(info.get("data", {}).get("id") or info.get("resource"))
-    topic = info.get("topic")
-
-    print("📩 Webhook recebido!")
-    print(json.dumps(info, indent=2))
-    print("🔹 Payment ID:", payment_id)
-    print("🔹 Topic:", topic)
-
-    if payment_id:
-        payment_info = verificar_pagamento(payment_id)
-        status = payment_info.get("status") if payment_info else None
-        print(f"💳 Pagamento {payment_id} status={status}")
-
-        if status == "approved":
-            # Procura pedido pelo payment_id diretamente
-            pedido_encontrado = pedidos_pendentes.pop(payment_id, None)
-
-            if pedido_encontrado:
-                limpar_pagamento_maquininha(POS_EXTERNAL_ID)
-
-                # Cria payload para ESP32 usando ID_MAP ou NOME_MAP
-                payload_esp = []
-                for item in pedido_encontrado["itens"]:
-                    pid = item.get("id") or NOME_MAP.get(item.get("name"), 1)
-                    payload_esp.append({"id": pid, "quantidade": item.get("qty",1)})
-
-                pedidos_aprovados.append({
-                    "order_id": pedido_encontrado["order_id"],
-                    "pedido": payload_esp,
-                    "total": pedido_encontrado["total"],
-                    "liberado": False
-                })
-
-                print(f"✅ Pedido {pedido_encontrado['order_id']} aprovado e enviado para fila do ESP32.")
-                print("➡️ Payload ESP32:", json.dumps(payload_esp, indent=2))
-            else:
-                print("⚠️ Payment aprovado, mas pedido não encontrado nos pendentes.")
-
-    return jsonify({"status": "ok"})
-
-
 # === ROTA: ESP CONSULTA PEDIDOS ===
 @app.route("/esp_pedido", methods=["GET"])
 def esp_pedido():
