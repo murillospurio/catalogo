@@ -108,11 +108,18 @@ h1 {
   background-color: #007bff;
   color: #fff;
   border: none;
-  margin-left: 10px;
+  margin: 0;
 }
 
 .carrinho button:hover {
   background-color: #0056b3;
+}
+
+.carrinho-botoes {
+  display: flex;
+  flex-direction: column; /* empilha os botões */
+  gap: 10px;              /* espaço entre eles */
+  margin-top: 10px;
 }
 
 #itensCarrinho {
@@ -166,8 +173,10 @@ h1 {
   <img src="carrinho.png" alt="Carrinho">
   <div id="itensCarrinho">Vazio</div>
   <div>Total: R$ <span id="total">0.00</span></div>
-  <button id="verPedidoBtn">Ver Pedido</button>
-  <button onclick="cancelarPedido()">Cancelar Pedido</button>
+  <div class="carrinho-botoes">
+    <button id="verPedidoBtn">Ver Pedido</button>
+    <button onclick="cancelarPedido()">Cancelar Pedido</button>
+  </div>
 </div>
 
 <div id="overlay">
