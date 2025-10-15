@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
+import time
 import os
 import json
 
@@ -39,37 +40,37 @@ NOME_MAP = {
     "original": 12,
 }
 
-# === FUNÇÕES AUXILIARES ===
-def criar_pagamento_maquininha(amount_cents, descricao="Pedido", order_id=None):
+# === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA ===
+def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
+    # cancelar qualquer pagamento pendente antes
     limpar_pagamento_maquininha(POS_EXTERNAL_ID)
+
     url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
     headers = {
         "Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
     payload = {
-        "transaction_amount": amount_cents / 100,  # converte centavos para reais
+        "amount": float(amount),
         "description": descricao,
-        "payment_method_id": "card",
-        "external_reference": order_id  # <- referência única
     }
 
     try:
         response = requests.post(url, headers=headers, json=payload)
-        data = response.json()
+        response_data = response.json()
         if response.status_code == 201:
             print("✅ Pagamento criado na maquininha!")
-            print(json.dumps(data, indent=2))
-            return data
+            print(json.dumps(response_data, indent=2))
+            return response_data
         else:
             print(f"❌ Erro ao criar pagamento: {response.status_code}")
-            print(json.dumps(data, indent=2))
+            print(json.dumps(response_data, indent=2))
             return None
     except Exception as e:
         print("Erro ao criar pagamento:", e)
         return None
 
-
+# === FUNÇÃO: LIMPAR PAGAMENTO PENDENTE NA MAQUININHA ===
 def limpar_pagamento_maquininha(serial_number):
     try:
         url = f"https://api.mercadopago.com/point/integration-api/devices/{serial_number}/payment-intents/cancel"
@@ -79,12 +80,24 @@ def limpar_pagamento_maquininha(serial_number):
     except Exception as e:
         print(f"Erro ao limpar maquininha: {e}")
 
+# === FUNÇÃO: VERIFICAR STATUS DO PAGAMENTO ===
 def verificar_pagamento(payment_id):
     url = f"https://api.mercadopago.com/v1/payments/{payment_id}"
     headers = {"Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}"}
     resp = requests.get(url, headers=headers)
     return resp.json() if resp.ok else None
 
+ID_MAP = {
+    1: 15,  # Produto 1 → rele/pino 
+    2: 18,
+    3: 19,
+    4: 21,
+    5: 22,
+    6: 23,
+    7: 13,
+    8: 12,
+
+# === ROTA: RECEBER PEDIDO DO CATÁLOGO ===
 @app.route("/pedido", methods=["POST"])
 def receber_pedido():
     try:
@@ -93,90 +106,92 @@ def receber_pedido():
         total = float(data.get("total", 0))
         order_id = data.get("order_id")
 
-        if not total or not itens or not order_id:
+        if not total or not itens:
             return jsonify({"erro": "Pedido inválido"}), 400
 
-        descricao = ", ".join([f"{i.get('name','item')} x{i.get('qty',1)}" for i in itens])
+        descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
         print(f"🛒 Novo pedido {order_id}: {descricao} | Total R$ {total}")
 
-        # Cria pagamento na API MP
+        # Cria o pagamento na maquininha
         pagamento = criar_pagamento_maquininha(total * 100, descricao, order_id)
-        if not pagamento or "id" not in pagamento:
+        if not pagamento:
             return jsonify({"erro": "Falha ao criar pagamento"}), 500
 
-        payment_id = str(pagamento["id"])
-
-        # Salva pedido pendente usando order_id como chave
+        # Guarda o pedido pendente incluindo o payment_id corretamente
         pedidos_pendentes[order_id] = {
             "order_id": order_id,
             "itens": itens,
             "total": total,
             "status": "pending",
-            "payment_id": payment_id
+            "payment_id": pagamento.get("id")  # ✅ Corrigido: dentro do dicionário
         }
 
-        print(f"📝 Pedido pendente salvo: {order_id} | payment_id={payment_id}")
-
-        return jsonify({"status": "created", "order_id": order_id, "payment_id": payment_id}), 200
+        return jsonify({"status": "created", "order_id": order_id}), 200
 
     except Exception as e:
         print("Erro ao processar pedido:", e)
         return jsonify({"erro": str(e)}), 500
 
+# === ROTA: WEBHOOK DE PAGAMENTO ===
 @app.route("/webhook", methods=["POST"])
 def webhook():
     info = request.json or {}
-    payment_id = info.get("resource")
-    topic = info.get("topic")
+    # também pega da query string caso venha assim
+    payment_id = info.get("data", {}).get("id") or request.args.get("id") or info.get("resource")
+    topic = info.get("topic") or request.args.get("topic")
 
     print("📩 Webhook recebido!")
     print(json.dumps(info, indent=2))
     print("🔹 Payment ID:", payment_id)
     print("🔹 Topic:", topic)
 
-    if payment_id and topic == "payment":
+    if payment_id:
+        # Consulta status real do pagamento
         payment_info = verificar_pagamento(payment_id)
-        if not payment_info:
-            return jsonify({"status": "erro"}), 500
-
-        status = payment_info.get("status")
-        order_id = payment_info.get("external_reference")  # <- pega order_id original
-        print(f"💳 Pagamento {payment_id} status={status}, order_id={order_id}")
+        status = payment_info.get("status") if payment_info else None
+        print(f"💳 Pagamento {payment_id} status={status}")
 
         if status == "approved":
-            if order_id in pedidos_pendentes:
-                pedido_encontrado = pedidos_pendentes.pop(order_id)
+            if pedidos_pendentes:
+                order_ref, pedido = pedidos_pendentes.popitem()
                 limpar_pagamento_maquininha(POS_EXTERNAL_ID)
 
-                payload_esp = []
-                for item in pedido_encontrado["itens"]:
-                    pid = item.get("id") or NOME_MAP.get(item.get("name"), 1)
-                    payload_esp.append({"id": pid, "quantidade": item.get("qty",1)})
+                payload_esp = [{"id": idx + 1, "quantidade": item["qty"]} for idx, item in enumerate(pedido["itens"])]
 
                 pedidos_aprovados.append({
-                    "order_id": order_id,
+                    "order_id": order_ref,
                     "pedido": payload_esp,
-                    "total": pedido_encontrado["total"],
+                    "total": pedido["total"],
                     "liberado": False
                 })
 
-                print(f"✅ Pedido {order_id} aprovado e enviado para fila do ESP32.")
-                print("➡️ Payload ESP32:", json.dumps(payload_esp, indent=2))
-            else:
-                print("⚠️ Payment aprovado, mas pedido não encontrado nos pendentes.")
+                print(f"✅ Pedido {order_ref} aprovado e enviado para fila do ESP32.")
+
+                try:
+                    r = requests.get(ESP32_URL, timeout=5)
+                    print("📡 ESP32 notificado:", r.status_code)
+                except Exception as e:
+                    print("⚠️ Falha ao notificar ESP32:", e)
 
     return jsonify({"status": "ok"})
 
+# === ROTA: ESP CONSULTA PEDIDOS ===
 @app.route("/esp_pedido", methods=["GET"])
 def esp_pedido():
-    """
-    Rota que o ESP32 consulta para pegar pedidos aprovados
-    """
-    pedidos_para_esp = [p for p in pedidos_aprovados if not p["liberado"]]
-    for p in pedidos_para_esp:
-        p["liberado"] = True
-    return jsonify(pedidos_para_esp), 200
+    print("\n📲 ESP consultou pedidos...")
+    if pedidos_aprovados:
+        pedido = pedidos_aprovados.pop(0)
+        print("➡️ Enviando pedido:", pedido)
+        return jsonify(pedido)
 
-# ================= MAIN =================
+    print("⚠️ Nenhum item para liberar.")
+    return jsonify({"status": "vazio"}), 200
+
+# === ROTA: HOME ===
+@app.route("/", methods=["GET"])
+def home():
+    return "✅ API Flask + Mercado Pago + ESP32 ativa!", 200
+
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
