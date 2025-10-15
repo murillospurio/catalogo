@@ -94,27 +94,23 @@ def receber_pedido():
         descricao = ", ".join([f"{i.get('name','item')} x{i.get('qty',1)}" for i in itens])
         print(f"🛒 Novo pedido {order_id}: {descricao} | Total R$ {total}")
 
-        # Cria pagamento
+        # Cria pagamento na maquininha
         pagamento = criar_pagamento_maquininha(total * 100, descricao, order_id)
         if not pagamento or "id" not in pagamento:
             return jsonify({"erro": "Falha ao criar pagamento"}), 500
 
-        # ⚠️ Pega o ID real do pagamento (único por transação)
-        payment_info = verificar_pagamento(pagamento["id"])
-        real_payment_id = str(payment_info.get("id")) if payment_info else str(pagamento["id"])
-
-        # Salva pedido pendente usando o real_payment_id como chave
-        pedidos_pendentes[real_payment_id] = {
+        # ✅ Salva pedido pendente usando order_id como chave, incluindo payment_id dentro do dicionário
+        pedidos_pendentes[order_id] = {
             "order_id": order_id,
             "itens": itens,
             "total": total,
             "status": "pending",
-            "payment_id": real_payment_id
+            "payment_id": pagamento.get("id")
         }
 
-        print(f"📝 Pedido pendente salvo: {order_id} | payment_id={real_payment_id}")
+        print(f"📝 Pedido pendente salvo: {order_id} | payment_id={pagamento.get('id')}")
 
-        return jsonify({"status": "created", "order_id": order_id, "payment_id": real_payment_id}), 200
+        return jsonify({"status": "created", "order_id": order_id, "payment_id": pagamento.get("id")}), 200
 
     except Exception as e:
         print("Erro ao processar pedido:", e)
