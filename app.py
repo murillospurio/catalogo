@@ -118,7 +118,6 @@ def receber_pedido():
         print("Erro ao processar pedido:", e)
         return jsonify({"erro": str(e)}), 500
 
-# === ROTA: WEBHOOK DE PAGAMENTO ===
 @app.route("/webhook", methods=["POST"])
 def webhook():
     info = request.json or {}
@@ -140,24 +139,22 @@ def webhook():
                 order_ref, pedido = pedidos_pendentes.popitem()
                 limpar_pagamento_maquininha(POS_EXTERNAL_ID)
 
-payload_esp = []
+                payload_esp = []
 
-for item in pedido["itens"]:
-    prod_id = item.get("id")
+                for item in pedido["itens"]:
+                    prod_id = item.get("id")
 
-    if prod_id and prod_id in ID_MAP:
-        rele_id = ID_MAP[prod_id]
-    else:
-        # fallback pelo nome
-        nome_item = item.get("name", "").strip().lower()
-        rele_id = NOME_MAP.get(nome_item, 0)  # 0 = inválido
+                    if prod_id and prod_id in ID_MAP:
+                        rele_id = ID_MAP[prod_id]
+                    else:
+                        # fallback pelo nome
+                        nome_item = item.get("name", "").strip().lower()
+                        rele_id = NOME_MAP.get(nome_item, 0)  # 0 = inválido
 
-    payload_esp.append({
-        "id": rele_id,
-        "quantidade": item["qty"]
-    })
-
-
+                    payload_esp.append({
+                        "id": rele_id,
+                        "quantidade": item["qty"]
+                    })
 
                 pedidos_aprovados.append({
                     "order_id": order_ref,
@@ -175,6 +172,7 @@ for item in pedido["itens"]:
                     print("⚠️ Falha ao notificar ESP32:", e)
 
     return jsonify({"status": "ok"})
+
 
 # === ROTA: ESP CONSULTA PEDIDOS ===
 @app.route("/esp_pedido", methods=["GET"])
