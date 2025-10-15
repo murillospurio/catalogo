@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
-import time
 import os
 import json
 
@@ -42,7 +41,6 @@ NOME_MAP = {
 
 # === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA ===
 def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
-    # cancelar qualquer pagamento pendente antes
     limpar_pagamento_maquininha(POS_EXTERNAL_ID)
 
     url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
@@ -87,16 +85,6 @@ def verificar_pagamento(payment_id):
     resp = requests.get(url, headers=headers)
     return resp.json() if resp.ok else None
 
-ID_MAP = {
-    1: 15,  # Produto 1 → rele/pino 
-    2: 18,
-    3: 19,
-    4: 21,
-    5: 22,
-    6: 23,
-    7: 13,
-    8: 12,
-
 # === ROTA: RECEBER PEDIDO DO CATÁLOGO ===
 @app.route("/pedido", methods=["POST"])
 def receber_pedido():
@@ -112,18 +100,16 @@ def receber_pedido():
         descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
         print(f"🛒 Novo pedido {order_id}: {descricao} | Total R$ {total}")
 
-        # Cria o pagamento na maquininha
         pagamento = criar_pagamento_maquininha(total * 100, descricao, order_id)
         if not pagamento:
             return jsonify({"erro": "Falha ao criar pagamento"}), 500
 
-        # Guarda o pedido pendente incluindo o payment_id corretamente
         pedidos_pendentes[order_id] = {
             "order_id": order_id,
             "itens": itens,
             "total": total,
             "status": "pending",
-            "payment_id": pagamento.get("id")  # ✅ Corrigido: dentro do dicionário
+            "payment_id": pagamento.get("id")
         }
 
         return jsonify({"status": "created", "order_id": order_id}), 200
@@ -136,7 +122,6 @@ def receber_pedido():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     info = request.json or {}
-    # também pega da query string caso venha assim
     payment_id = info.get("data", {}).get("id") or request.args.get("id") or info.get("resource")
     topic = info.get("topic") or request.args.get("topic")
 
@@ -146,7 +131,6 @@ def webhook():
     print("🔹 Topic:", topic)
 
     if payment_id:
-        # Consulta status real do pagamento
         payment_info = verificar_pagamento(payment_id)
         status = payment_info.get("status") if payment_info else None
         print(f"💳 Pagamento {payment_id} status={status}")
