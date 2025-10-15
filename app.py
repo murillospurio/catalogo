@@ -119,12 +119,11 @@ def receber_pedido():
         return jsonify({"erro": str(e)}), 500
 
 
-# === ROTA: WEBHOOK DE PAGAMENTO ===
 @app.route("/webhook", methods=["POST"])
 def webhook():
     info = request.json or {}
-    payment_id = info.get("data", {}).get("id") or request.args.get("id") or info.get("resource")
-    topic = info.get("topic") or request.args.get("topic")
+    payment_id = info.get("resource")  # <-- use apenas isso
+    topic = info.get("topic")
 
     print("📩 Webhook recebido!")
     print(json.dumps(info, indent=2))
@@ -138,7 +137,7 @@ def webhook():
         print(f"💳 Pagamento {payment_id} status={status}")
 
         if status == "approved":
-            # Procura pedido no dicionário pelo payment_id
+            # Procura pedido pelo payment_id
             pedido_encontrado = None
             order_ref = None
             for key, pedido in pedidos_pendentes.items():
@@ -150,7 +149,6 @@ def webhook():
             if pedido_encontrado:
                 limpar_pagamento_maquininha(POS_EXTERNAL_ID)
 
-                # Cria payload para ESP32 usando ID_MAP ou NOME_MAP
                 payload_esp = []
                 for item in pedido_encontrado["itens"]:
                     pid = item.get("id") or NOME_MAP.get(item.get("name"), 1)
