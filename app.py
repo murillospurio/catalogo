@@ -119,6 +119,7 @@ def receber_pedido():
         return jsonify({"erro": str(e)}), 500
 
 # === ROTA: WEBHOOK DE PAGAMENTO ===
+# === ROTA: WEBHOOK DE PAGAMENTO ===
 @app.route("/webhook", methods=["POST"])
 def webhook():
     info = request.json or {}
@@ -133,17 +134,26 @@ def webhook():
     if payment_id:
         payment_info = verificar_pagamento(payment_id)
         status = payment_info.get("status") if payment_info else None
-        print(f"💳 Pagamento {payment_id} status={status}")
+        # Tenta pegar order_id direto do pagamento, se disponível
+        order_id = payment_info.get("order") if payment_info else None
+
+        print(f"💳 Pagamento {payment_id} status={status} | order_id={order_id}")
 
         if status == "approved":
-            # Procura pedido pelo payment_id
+            # 1️⃣ Tenta localizar pelo order_id primeiro
             pedido_encontrado = None
             order_ref = None
-            for oid, p in pedidos_pendentes.items():
-                if str(p.get("payment_id")) == payment_id:
-                    pedido_encontrado = p
-                    order_ref = oid
-                    break
+
+            if order_id and order_id in pedidos_pendentes:
+                pedido_encontrado = pedidos_pendentes[order_id]
+                order_ref = order_id
+            else:
+                # 2️⃣ Fallback: localizar pelo payment_id
+                for oid, p in pedidos_pendentes.items():
+                    if str(p.get("payment_id")) == payment_id:
+                        pedido_encontrado = p
+                        order_ref = oid
+                        break
 
             if pedido_encontrado:
                 pedidos_pendentes.pop(order_ref)
