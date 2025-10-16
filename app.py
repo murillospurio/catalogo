@@ -157,14 +157,21 @@ def webhook():
 
     return jsonify({"status": "ok"})
 
-# === ROTA: ESP CONSULTA PEDIDOS ===
 @app.route("/esp_pedido", methods=["GET"])
 def esp_pedido():
     print("\n📲 ESP consultou pedidos...")
-    if pedidos_aprovados:
-        pedido = pedidos_aprovados.pop(0)
-        print("➡️ Enviando pedido:", pedido)
-        return jsonify(pedido)
+    try:
+        if pedidos_aprovados:
+            pedido = pedidos_aprovados.pop(0)
+            print("➡️ Enviando pedido:", pedido)
+            return jsonify(pedido)
+    except Exception as e:
+        print("⚠️ Erro ao enviar pedido:", e)
+    
+    # Sempre retorna algo válido
+    print("⚠️ Nenhum item para liberar.")
+    return jsonify({"status": "vazio"}), 200
+
 # === ROTA: HOME ===
 @app.route("/", methods=["GET"])
 def home():
