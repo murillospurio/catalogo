@@ -83,7 +83,7 @@ def receber_pedido():
         descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
         print(f"🛒 Novo pedido {order_id}: {descricao} | Total R$ {total}")
 
-        pagamento = criar_pagamento_maquininha(total * 100, descricao, order_id)
+        pagamento = criar_pagamento_maquininha(total, descricao, order_id)
         if not pagamento:
             return jsonify({"erro": "Falha ao criar pagamento"}), 500
 
