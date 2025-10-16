@@ -130,13 +130,19 @@ def webhook():
         print(f"💳 Pagamento {payment_id} status={status}")
 
         if status == "approved":
+            # Pega o UUID do payment_intent criado na maquininha
+            payment_intent_id = payment_info.get("point_of_interaction", {}) \
+                                            .get("transaction_data", {}) \
+                                            .get("id")
+            print("🔹 Payment Intent ID (UUID da maquininha):", payment_intent_id)
+
             pedido_encontrado = None
             order_ref = None
             for arquivo in os.listdir(PASTA_PENDENTES):
                 caminho = os.path.join(PASTA_PENDENTES, arquivo)
                 with open(caminho, "r", encoding="utf-8") as f:
                     p = json.load(f)
-                if p.get("payment_id") == payment_id:
+                if p.get("payment_id") == payment_intent_id:
                     pedido_encontrado = p
                     order_ref = arquivo.replace(".json", "")
                     os.remove(caminho)  # remove após encontrar
