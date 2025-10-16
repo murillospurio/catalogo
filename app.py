@@ -29,7 +29,7 @@ def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
     headers = {"Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}", "Content-Type": "application/json"}
 
     payload = {
-        "amount": float(amount),
+        "amount": int(float(amount) * 100),
         "description": descricao,
     }
 
