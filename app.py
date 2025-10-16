@@ -70,47 +70,36 @@ def verificar_pagamento(payment_id):
 
 # === ROTA: RECEBER PEDIDO DO CATÁLOGO ===
 @app.route("/pedido", methods=["POST"])
-def criar_pedido():
-    data = request.json or {}
-    itens = data.get("items", [])
-    total = data.get("total", 0.0)
-    
-    if not itens:
-        return jsonify({"status": "erro", "mensagem": "Nenhum item enviado"}), 400
-
-    # Gera um ID único para o pedido
-    order_ref = "PED-" + str(int(time.time() * 1000))
-
-    # Cria descrição para a maquininha
-    descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
-
-    # === Cria pagamento na maquininha ===
+def receber_pedido():
     try:
-        pagamento = criar_pagamento_maquininha(total, descricao, POS_EXTERNAL_ID)
-        payment_id = pagamento.get("id")
-        print(f"💳 Pagamento criado na maquininha! Payment ID: {payment_id}")
-    except Exception as e:
-        print("⚠️ Erro ao criar pagamento na maquininha:", e)
-        return jsonify({"status": "erro", "mensagem": "Falha ao criar pagamento"}), 500
+        data = request.get_json()
+        itens = data.get("items", [])
+        total = float(data.get("total", 0))
+        order_id = data.get("order_id")
 
-    # === Salva o pedido nos pendentes, incluindo payment_id ===
-    arquivo_pendente = os.path.join(PASTA_PENDENTES, f"{order_ref}.json")
-    with open(arquivo_pendente, "w", encoding="utf-8") as f:
-        json.dump({
+        if not total or not itens:
+            return jsonify({"erro": "Pedido inválido"}), 400
+
+        descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
+        print(f"🛒 Novo pedido {order_id}: {descricao} | Total R$ {total}")
+
+        pagamento = criar_pagamento_maquininha(total * 100, descricao, order_id)
+        if not pagamento:
+            return jsonify({"erro": "Falha ao criar pagamento"}), 500
+
+        pedidos_pendentes[order_id] = {
+            "order_id": order_id,
             "itens": itens,
             "total": total,
-            "payment_id": payment_id
-        }, f, ensure_ascii=False, indent=2)
+            "status": "pending",
+            "payment_id": pagamento.get("id")
+        }
 
-    print(f"📝 Pedido salvo nos pendentes: {arquivo_pendente}")
+        return jsonify({"status": "created", "order_id": order_id}), 200
 
-    # Retorna info básica para o frontend
-    return jsonify({
-        "status": "ok",
-        "order_id": order_ref,
-        "payment_id": payment_id,
-        "total": total
-    }), 200
+    except Exception as e:
+        print("Erro ao processar pedido:", e)
+        return jsonify({"erro": str(e)}), 500
 
 # === ROTA: WEBHOOK - RECEBIMENTO DE STATUS DE PAGAMENTO ===
 @app.route("/webhook", methods=["POST"])
@@ -130,49 +119,34 @@ def webhook():
         print(f"💳 Pagamento {payment_id} status={status}")
 
         if status == "approved":
-            # Pega o UUID do payment_intent criado na maquininha
-            payment_intent_id = payment_info.get("point_of_interaction", {}) \
-                                            .get("transaction_data", {}) \
-                                            .get("id")
-            print("🔹 Payment Intent ID (UUID da maquininha):", payment_intent_id)
+            if pedidos_pendentes:
+                # Pega o primeiro pedido pendente
+                order_ref, pedido = pedidos_pendentes.popitem()
 
-            pedido_encontrado = None
-            order_ref = None
-            for arquivo in os.listdir(PASTA_PENDENTES):
-                caminho = os.path.join(PASTA_PENDENTES, arquivo)
-                with open(caminho, "r", encoding="utf-8") as f:
-                    p = json.load(f)
-                if p.get("payment_id") == payment_intent_id:
-                    pedido_encontrado = p
-                    order_ref = arquivo.replace(".json", "")
-                    os.remove(caminho)  # remove após encontrar
-                    break
-
-            if pedido_encontrado:
-                # Cancela qualquer cobrança pendente na maquininha
-                print("🧹 Limpando cobranças anteriores na maquininha...")
+                # ⚡ Limpa cobrança pendente na maquininha para evitar duplicidade
                 try:
                     limpar_pagamento_maquininha(POS_EXTERNAL_ID)
-                    time.sleep(1)
-                    limpar_pagamento_maquininha(POS_EXTERNAL_ID)
+                    print(f"🧹 Pagamento na maquininha limpo após aprovação de {order_ref}")
                 except Exception as e:
-                    print("⚠️ Falha ao limpar maquininha após aprovação:", e)
+                    print("⚠️ Falha ao limpar maquininha:", e)
 
-                payload_esp = [{"id": item["id"], "quantidade": item["qty"]} for item in pedido_encontrado["itens"]]
+                # Prepara payload para o ESP32
+                payload_esp = []
+                for item in pedido["itens"]:
+                    prod_id = item.get("id")
+                    payload_esp.append({
+                        "id": prod_id,
+                        "quantidade": item["qty"]
+                    })
 
-                pedido_salvar = {
+                pedidos_aprovados.append({
                     "order_id": order_ref,
                     "pedido": payload_esp,
-                    "total": pedido_encontrado["total"],
+                    "total": pedido["total"],
                     "liberado": False
-                }
+                })
 
-                # ✅ Salvar o pedido aprovado em arquivo JSON
-                arquivo_pedido = os.path.join(PASTA_PEDIDOS, f"pedido_{order_ref}.json")
-                with open(arquivo_pedido, "w", encoding="utf-8") as f:
-                    json.dump(pedido_salvar, f, ensure_ascii=False, indent=2)
-
-                print(f"💾 Pedido salvo em: {arquivo_pedido}")
+                print(f"✅ Pedido {order_ref} aprovado e enviado para fila do ESP32.")
 
                 # Notifica o ESP32
                 try:
@@ -180,8 +154,6 @@ def webhook():
                     print("📡 ESP32 notificado:", r.status_code)
                 except Exception as e:
                     print("⚠️ Falha ao notificar ESP32:", e)
-            else:
-                print("⚠️ Payment aprovado, mas pedido não encontrado nos pendentes.")
 
     return jsonify({"status": "ok"})
 
@@ -189,20 +161,10 @@ def webhook():
 @app.route("/esp_pedido", methods=["GET"])
 def esp_pedido():
     print("\n📲 ESP consultou pedidos...")
-
-    # Verifica arquivos na pasta
-    arquivos = sorted(os.listdir(PASTA_PEDIDOS))
-    if arquivos:
-        arquivo = os.path.join(PASTA_PEDIDOS, arquivos[0])
-        with open(arquivo, "r", encoding="utf-8") as f:
-            pedido = json.load(f)
-        os.remove(arquivo)  # ✅ remove após enviar
-        print("➡️ Enviando pedido do arquivo:", arquivo)
+    if pedidos_aprovados:
+        pedido = pedidos_aprovados.pop(0)
+        print("➡️ Enviando pedido:", pedido)
         return jsonify(pedido)
-
-    print("⚠️ Nenhum item para liberar.")
-    return jsonify({"status": "vazio"}), 200
-
 # === ROTA: HOME ===
 @app.route("/", methods=["GET"])
 def home():
