@@ -25,12 +25,16 @@ os.makedirs(PASTA_PENDENTES, exist_ok=True)
 
 # === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA ===
 def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
-      if order_id in pedidos_pendentes:
+    # ✅ Evita criar pagamento duplicado para o mesmo pedido
+    if order_id in pedidos_pendentes:
         print(f"⚠️ Pedido {order_id} já possui cobrança pendente. Ignorando nova criação.")
         return None
 
     url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
-    headers = {"Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
 
     payload = {
         "amount": int(float(amount) * 100),
@@ -41,16 +45,17 @@ def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
         response = requests.post(url, headers=headers, json=payload)
         response_data = response.json()
         if response.status_code == 201:
-            print("✅ Pagamento criado na maquininha!")
+            print(f"✅ Pagamento criado na maquininha para o pedido {order_id}!")
             print(json.dumps(response_data, indent=2))
             return response_data
         else:
-            print(f"❌ Erro ao criar pagamento: {response.status_code}")
+            print(f"❌ Erro ao criar pagamento ({response.status_code}):")
             print(json.dumps(response_data, indent=2))
             return None
     except Exception as e:
         print("Erro ao criar pagamento:", e)
         return None
+
 
 # === FUNÇÃO: LIMPAR PAGAMENTO PENDENTE NA MAQUININHA ===
 def limpar_pagamento_maquininha(serial_number):
