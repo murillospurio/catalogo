@@ -25,8 +25,9 @@ os.makedirs(PASTA_PENDENTES, exist_ok=True)
 
 # === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA ===
 def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
-    limpar_pagamento_maquininha(POS_EXTERNAL_ID)
-    time.sleep(1.5)
+      if order_id in pedidos_pendentes:
+        print(f"⚠️ Pedido {order_id} já possui cobrança pendente. Ignorando nova criação.")
+        return None
 
     url = f"https://api.mercadopago.com/point/integration-api/devices/{POS_EXTERNAL_ID}/payment-intents"
     headers = {"Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}", "Content-Type": "application/json"}
