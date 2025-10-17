@@ -181,9 +181,16 @@ function fecharOverlay(){
   if(overlayTimer) { clearTimeout(overlayTimer); overlayTimer = null; }
 }
 
-// ----- CONFIRMAR PEDIDO NO OVERLAY -----
 document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
-  overlayItens.innerHTML = "⏳ Aperte o botão verde para continuar, obrigada!";
+  overlayItens.innerHTML = "⏳ Enviando pedido...";
+
+  // Fecha automaticamente após 10 segundos, garanta que o overlay vai sumir
+  if (overlayTimer) clearTimeout(overlayTimer);
+  overlayTimer = setTimeout(() => {
+    fecharOverlay();
+    cancelarPedido();
+  }, 10000); // 10 segundos
+
   const items = [];
   let total = 0;
   for (let id in carrinho) {
@@ -203,21 +210,9 @@ document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
     body: JSON.stringify(pedido)
   })
   .then(async resp => {
-    let data;
-    try { data = await resp.json(); } catch (e) { data = { status: "ok" }; }
-
     if (resp.ok) {
-      setTimeout(() => {
-        overlayItens.innerHTML = "✅ Aperte o botão verde da máquina para continuar. Obrigada!";
-        setTimeout(() => {
-          fecharOverlay();
-          
-        }, 3000);
-      }, 1000);
+      overlayItens.innerHTML = "✅ Aperte o botão verde da máquina para continuar.";
     } else {
-      overlayItens.innerHTML = "❌ Falha ao enviar pedido para maquininha.";
-      setTimeout(() => fecharOverlay(), 3000);
-    }
       const texto = await resp.text();
       overlayItens.innerHTML = `❌ Erro ao enviar pedido! Status: ${resp.status}`;
       console.error("Erro do servidor:", texto);
@@ -230,6 +225,7 @@ document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
 
   resetTimerLimpeza();
 });
+
 
 
 // Timer de limpeza
