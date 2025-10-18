@@ -205,14 +205,14 @@ h1 {
 <div id="overlay">
   <h2>Seu Pedido</h2>
   <div id="overlayItens"></div>
-  <button id="overlayConfirmarBtn">Confirmar Pedido</button>
 
-  <!-- 🔹 NOVAS OPÇÕES DE PAGAMENTO -->
+  <!-- Opções de pagamento aparecem automaticamente -->
   <div id="pagamentoOpcoes">
     <button id="btnDebito" onclick="confirmarComForma('debito')">💳 Débito</button>
     <button id="btnCredito" onclick="confirmarComForma('credito')">💰 Crédito</button>
     <button id="btnPix" onclick="confirmarComForma('pix')">⚡ Pix</button>
   </div>
+
   <button onclick="fecharOverlay()">Cancelar</button>
 </div>
 
@@ -325,12 +325,14 @@ document.getElementById('verPedidoBtn').addEventListener('click',()=>{
       overlayItens.innerHTML += `${p.nome} x ${carrinho[id]} = R$ ${(p.preco*carrinho[id]).toFixed(2)}<br>`;
     }
   }
+
   if(vazio) overlayItens.innerHTML='Carrinho vazio!';
-  else overlayItens.innerHTML += `<br><b>Total: R$ ${total.toFixed(2)}</b>`;
-  
+  else overlayItens.innerHTML += `<br><b>Total: R$ ${total.toFixed(2)}</b><br><br>Escolha a forma de pagamento:`;
+
+  document.getElementById('pagamentoOpcoes').style.display = 'flex';
   overlay.classList.add('show');
   if(overlayTimer) clearTimeout(overlayTimer);
-  overlayTimer = setTimeout(()=>{ fecharOverlay(); },10000);
+  overlayTimer = setTimeout(()=>{ fecharOverlay(); },15000);
 });
 
 function fecharOverlay(){
@@ -338,10 +340,6 @@ function fecharOverlay(){
   document.getElementById('pagamentoOpcoes').style.display='none';
   if(overlayTimer) { clearTimeout(overlayTimer); overlayTimer = null; }
 }
-
-document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
-  document.getElementById('pagamentoOpcoes').style.display = 'flex';
-});
 
 function confirmarComForma(forma) {
   const items = [];

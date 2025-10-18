@@ -16,16 +16,13 @@ ESP32_URL = "http://192.168.5.57/liberar"
 pedidos_aprovados = []
 pedidos_pendentes = {}
 
-# === Criar pasta local para armazenar pedidos aprovados ===
-PASTA_PEDIDOS = "pedidos_aprovados"
-os.makedirs(PASTA_PEDIDOS, exist_ok=True)
+# === Criar pastas locais ===
+os.makedirs("pedidos_aprovados", exist_ok=True)
+os.makedirs("pedidos_pendentes", exist_ok=True)
 
-PASTA_PENDENTES = "pedidos_pendentes"
-os.makedirs(PASTA_PENDENTES, exist_ok=True)
 
 # === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA ===
-def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
-    # ✅ Evita criar pagamento duplicado para o mesmo pedido
+def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None, forma_pagamento="debito"):
     if order_id in pedidos_pendentes:
         print(f"⚠️ Pedido {order_id} já possui cobrança pendente. Ignorando nova criação.")
         return None
@@ -36,16 +33,27 @@ def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
         "Content-Type": "application/json"
     }
 
+    # === Ajusta o método conforme a forma escolhida ===
+    if forma_pagamento == "pix":
+        payment_type = "PIX"
+    elif forma_pagamento == "credito":
+        payment_type = "CREDIT_CARD"
+    else:
+        payment_type = "DEBIT_CARD"
+
     payload = {
         "amount": int(float(amount) * 100),
-        "description": descricao,
+        "description": f"{descricao} - {forma_pagamento.upper()}",
+        "payment": {
+            "type": payment_type
+        }
     }
 
     try:
         response = requests.post(url, headers=headers, json=payload)
         response_data = response.json()
         if response.status_code == 201:
-            print(f"✅ Pagamento criado na maquininha para o pedido {order_id}!")
+            print(f"✅ Pagamento criado na maquininha ({forma_pagamento}) para o pedido {order_id}!")
             print(json.dumps(response_data, indent=2))
             return response_data
         else:
@@ -57,7 +65,7 @@ def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None):
         return None
 
 
-# === FUNÇÃO: LIMPAR PAGAMENTO PENDENTE NA MAQUININHA ===
+# === FUNÇÃO: LIMPAR PAGAMENTO PENDENTE ===
 def limpar_pagamento_maquininha(serial_number):
     try:
         url = f"https://api.mercadopago.com/point/integration-api/devices/{serial_number}/payment-intents/cancel"
@@ -67,12 +75,14 @@ def limpar_pagamento_maquininha(serial_number):
     except Exception as e:
         print(f"Erro ao limpar maquininha: {e}")
 
-# === FUNÇÃO: VERIFICAR STATUS DO PAGAMENTO ===
+
+# === FUNÇÃO: VERIFICAR STATUS ===
 def verificar_pagamento(payment_id):
     url = f"https://api.mercadopago.com/v1/payments/{payment_id}"
     headers = {"Authorization": f"Bearer {MERCADO_PAGO_ACCESS_TOKEN}"}
     resp = requests.get(url, headers=headers)
     return resp.json() if resp.ok else None
+
 
 # === ROTA: RECEBER PEDIDO DO CATÁLOGO ===
 @app.route("/pedido", methods=["POST"])
@@ -82,14 +92,15 @@ def receber_pedido():
         itens = data.get("items", [])
         total = float(data.get("total", 0))
         order_id = data.get("order_id")
+        forma_pagamento = data.get("forma_pagamento", "debito")  # 👈 NOVO
 
         if not total or not itens:
             return jsonify({"erro": "Pedido inválido"}), 400
 
         descricao = ", ".join([f"{i['name']} x{i['qty']}" for i in itens])
-        print(f"🛒 Novo pedido {order_id}: {descricao} | Total R$ {total}")
+        print(f"🛒 Novo pedido {order_id}: {descricao} | Total R$ {total} | Forma: {forma_pagamento.upper()}")
 
-        pagamento = criar_pagamento_maquininha(total, descricao, order_id)
+        pagamento = criar_pagamento_maquininha(total, descricao, order_id, forma_pagamento)
         if not pagamento:
             return jsonify({"erro": "Falha ao criar pagamento"}), 500
 
@@ -98,16 +109,18 @@ def receber_pedido():
             "itens": itens,
             "total": total,
             "status": "pending",
+            "forma_pagamento": forma_pagamento,
             "payment_id": pagamento.get("id")
         }
 
-        return jsonify({"status": "created", "order_id": order_id}), 200
+        return jsonify({"status": "created", "order_id": order_id, "forma_pagamento": forma_pagamento}), 200
 
     except Exception as e:
         print("Erro ao processar pedido:", e)
         return jsonify({"erro": str(e)}), 500
 
-# === ROTA: WEBHOOK - RECEBIMENTO DE STATUS DE PAGAMENTO ===
+
+# === ROTA: WEBHOOK ===
 @app.route("/webhook", methods=["POST"])
 def webhook():
     info = request.json or {}
@@ -126,35 +139,29 @@ def webhook():
 
         if status == "approved":
             if pedidos_pendentes:
-                # Pega o primeiro pedido pendente
                 order_ref, pedido = pedidos_pendentes.popitem()
 
-                # ⚡ Limpa cobrança pendente na maquininha para evitar duplicidade
                 try:
                     limpar_pagamento_maquininha(POS_EXTERNAL_ID)
                     print(f"🧹 Pagamento na maquininha limpo após aprovação de {order_ref}")
                 except Exception as e:
                     print("⚠️ Falha ao limpar maquininha:", e)
 
-                # Prepara payload para o ESP32
                 payload_esp = []
                 for item in pedido["itens"]:
                     prod_id = item.get("id")
-                    payload_esp.append({
-                        "id": prod_id,
-                        "quantidade": item["qty"]
-                    })
+                    payload_esp.append({"id": prod_id, "quantidade": item["qty"]})
 
                 pedidos_aprovados.append({
                     "order_id": order_ref,
                     "pedido": payload_esp,
                     "total": pedido["total"],
+                    "forma_pagamento": pedido.get("forma_pagamento", "desconhecida"),
                     "liberado": False
                 })
 
-                print(f"✅ Pedido {order_ref} aprovado e enviado para fila do ESP32.")
+                print(f"✅ Pedido {order_ref} aprovado ({pedido.get('forma_pagamento').upper()}) e enviado ao ESP32.")
 
-                # Notifica o ESP32
                 try:
                     r = requests.get(ESP32_URL, timeout=5)
                     print("📡 ESP32 notificado:", r.status_code)
@@ -162,6 +169,7 @@ def webhook():
                     print("⚠️ Falha ao notificar ESP32:", e)
 
     return jsonify({"status": "ok"})
+
 
 @app.route("/esp_pedido", methods=["GET"])
 def esp_pedido():
@@ -173,15 +181,15 @@ def esp_pedido():
             return jsonify(pedido)
     except Exception as e:
         print("⚠️ Erro ao enviar pedido:", e)
-    
-    # Sempre retorna algo válido
+
     print("⚠️ Nenhum item para liberar.")
     return jsonify({"status": "vazio"}), 200
 
-# === ROTA: HOME ===
+
 @app.route("/", methods=["GET"])
 def home():
     return "✅ API Flask + Mercado Pago + ESP32 ativa!", 200
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
