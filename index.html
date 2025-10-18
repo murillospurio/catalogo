@@ -156,6 +156,37 @@ h1 {
 }
 #overlay button:hover { background-color:#0056b3; }
 
+/* === TELA DE REPOUSO === */
+#telaRepouso {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: radial-gradient(circle at center, rgba(0,102,204,0.6), rgba(0,0,50,0.95));
+  display: none;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  z-index: 9999;
+  transition: opacity 0.5s ease;
+  color: white;
+  pointer-events: none;
+}
+
+#telaRepouso.ativo {
+  display: flex;
+  opacity: 1;
+  pointer-events: all;
+}
+
+#telaRepouso h1 {
+  font-size: 60px;
+  font-family: 'Arial Black', sans-serif;
+  text-shadow: 0 0 20px rgba(0,150,255,0.9);
+  background: linear-gradient(90deg, #33ccff, #0066ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 </style>
 </head>
 <body>
@@ -351,7 +382,7 @@ document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
   resetTimerLimpeza();
 });
 
-// Timer de limpeza automática
+
 function resetTimerLimpeza(){
   if(timerLimpeza) clearTimeout(timerLimpeza);
   timerLimpeza=setTimeout(()=>{
@@ -361,6 +392,35 @@ function resetTimerLimpeza(){
 }
 
 mostrarProdutos();
+</script>
+
+<div id="telaRepouso">
+  <h1>Clique na tela para comprar</h1>
+</div>
+
+<script>
+  const telaRepouso = document.getElementById("telaRepouso");
+  let timerInatividade;
+
+  function mostrarTelaRepouso() {
+    telaRepouso.classList.add("ativo");
+  }
+
+  function esconderTelaRepouso() {
+    telaRepouso.classList.remove("ativo");
+    reiniciarTimer();
+  }
+
+  function reiniciarTimer() {
+    clearTimeout(timerInatividade);
+    timerInatividade = setTimeout(mostrarTelaRepouso, 3 * 60 * 1000); // 3 minutos
+  }
+
+  ['click', 'mousemove', 'keypress', 'touchstart', 'scroll'].forEach(evt => {
+    document.addEventListener(evt, esconderTelaRepouso);
+  });
+
+  mostrarTelaRepouso();
 </script>
 </body>
 </html>
