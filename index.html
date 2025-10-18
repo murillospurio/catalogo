@@ -18,8 +18,8 @@ h1 {
   color:#0816da;
   text-shadow:1px 1px 5px rgba(0,0,0,0.7);
   margin-top:150px;
-  margin-bottom: 200px; /* aumenta esse valor para descer mais */
-  text-align: center;   /* se quiser centralizar o título */
+  margin-bottom: 200px;
+  text-align: center;
 }
 
 /* Produtos */
@@ -27,12 +27,11 @@ h1 {
   display:flex;
   overflow-x:auto;
   scroll-snap-type: x mandatory;
-  padding:50px 20px 120px 20px; /* padding-bottom maior para não cobrir a barra */
+  padding:50px 20px 120px 20px;
   gap:20px;
   justify-content:flex-start;
   scrollbar-width:none;
 }
-
 #produtos::-webkit-scrollbar { display:none; }
 
 .produto {
@@ -50,7 +49,6 @@ h1 {
   padding:12px;
   box-sizing:border-box;
 }
-
 .produto img { width:auto; height:400px; object-fit:contain; }
 .produto div { font-size:32px; }
 .produto button {
@@ -67,7 +65,7 @@ h1 {
 .produto.central { transform:scale(1.1); opacity:1; z-index:10; }
 .produto:not(.central) { transform:scale(0.85); opacity:0.6; z-index:1; }
 
-/* Carrinho como barra inferior */
+/* Carrinho */
 .carrinho {
   position: fixed;
   bottom: 0;
@@ -86,13 +84,7 @@ h1 {
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
 }
-
-.carrinho img {
-  width: 100px;
-  height: 100px;
-  margin: 0;
-}
-
+.carrinho img { width: 100px; height: 100px; margin: 0; }
 #itensCarrinho {
   flex-grow: 1;
   overflow-x: auto;
@@ -100,11 +92,10 @@ h1 {
   padding: 0 10px;
   font-size: 26px;
 }
-
 .carrinho button {
   display: flex;
   width: 100%;
-  flex-direction: column; /* coloca itens um em cima do outro */
+  flex-direction: column;
   gap: 10px; 
   padding: 16px 22px;
   font-size: 30px;
@@ -121,26 +112,19 @@ h1 {
   color:#fff;
   z-index:9999;
   text-align:center;
-  padding-top:50px;
   box-sizing:border-box;
-  opacity:0;
-  transition: opacity 0.5s;
-
-  display: flex;             /* flex para centralizar */
-  flex-direction: column;    /* itens empilhados */
-  justify-content: center;   /* centraliza verticalmente */
-  align-items: center; 
-
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   opacity: 0;
-  pointer-events: none;       /* ⚠ bloqueia cliques e scroll quando invisível */
+  pointer-events: none;
   transition: opacity 0.5s;
 }
-
 #overlay.show {
   opacity: 1;
-  pointer-events: all;        /* ⚠ permite interagir quando visível */
+  pointer-events: all;
 }
-#overlay.show { display:block; opacity:1; }
 #overlay h2 { margin-bottom:20px; font-size:35px; }
 #overlay div { margin-bottom:15px; font-size:35px; }
 #overlay button {
@@ -156,7 +140,27 @@ h1 {
 }
 #overlay button:hover { background-color:#0056b3; }
 
-/* === TELA DE REPOUSO === */
+/* === Opções de pagamento === */
+#pagamentoOpcoes {
+  display: none;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+#pagamentoOpcoes button {
+  font-size: 28px;
+  padding: 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+}
+#btnDebito { background-color: #007bff; }
+#btnCredito { background-color: #28a745; }
+#btnPix { background-color: #ffc107; color: #000; }
+
+/* Tela de repouso */
 #telaRepouso {
   position: fixed;
   top: 0; left: 0;
@@ -171,13 +175,11 @@ h1 {
   color: white;
   pointer-events: none;
 }
-
 #telaRepouso.ativo {
   display: flex;
   opacity: 1;
   pointer-events: all;
 }
-
 #telaRepouso h1 {
   font-size: 60px;
   font-family: 'Arial Black', sans-serif;
@@ -186,7 +188,6 @@ h1 {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-
 </style>
 </head>
 <body>
@@ -205,6 +206,13 @@ h1 {
   <h2>Seu Pedido</h2>
   <div id="overlayItens"></div>
   <button id="overlayConfirmarBtn">Confirmar Pedido</button>
+
+  <!-- 🔹 NOVAS OPÇÕES DE PAGAMENTO -->
+  <div id="pagamentoOpcoes">
+    <button id="btnDebito" onclick="confirmarComForma('debito')">💳 Débito</button>
+    <button id="btnCredito" onclick="confirmarComForma('credito')">💰 Crédito</button>
+    <button id="btnPix" onclick="confirmarComForma('pix')">⚡ Pix</button>
+  </div>
   <button onclick="fecharOverlay()">Cancelar</button>
 </div>
 
@@ -223,7 +231,6 @@ const produtos = [
 let carrinho = {};
 let timerLimpeza = null;
 
-// Mostrar produtos
 function mostrarProdutos() {
   const div = document.getElementById('produtos');
   div.innerHTML='';
@@ -243,30 +250,21 @@ function mostrarProdutos() {
   destacarCentral();
 }
 
-// Alterar quantidade
 function alterarQuantidade(id, delta) {
   const produto = produtos.find(p => p.id === id);
   if(!carrinho[id]) carrinho[id]=0;
-
   let novaQtd = carrinho[id] + delta;
-
   if(novaQtd < 0) novaQtd = 0;
   if(novaQtd > produto.estoque) novaQtd = produto.estoque;
-
   let diff = novaQtd - carrinho[id];
   produto.estoque -= diff;
-  if(produto.estoque < 0) produto.estoque = 0;
-
   carrinho[id] = novaQtd;
-
   document.getElementById(`qtd-${id}`).innerText = novaQtd;
   document.getElementById(`estoque-${id}`).innerText = produto.estoque;
-
   atualizarCarrinho();
   resetTimerLimpeza();
 }
 
-// Atualiza carrinho
 function atualizarCarrinho() {
   const div=document.getElementById('itensCarrinho');
   div.innerHTML='';
@@ -283,7 +281,6 @@ function atualizarCarrinho() {
   document.getElementById('total').innerText=total.toFixed(2);
 }
 
-// Cancelar pedido
 function cancelarPedido(){
   for(let id in carrinho){
     const qtd = carrinho[id];
@@ -299,7 +296,6 @@ function cancelarPedido(){
   resetTimerLimpeza();
 }
 
-// Destacar central
 function destacarCentral() {
   const produtosDivs=document.querySelectorAll('.produto');
   const container=document.getElementById('produtos');
@@ -314,7 +310,6 @@ function destacarCentral() {
   produtosDivs[0].classList.add('central');
 }
 
-// Overlay
 const overlay=document.getElementById('overlay');
 const overlayItens=document.getElementById('overlayItens');
 let overlayTimer = null;
@@ -334,18 +329,21 @@ document.getElementById('verPedidoBtn').addEventListener('click',()=>{
   else overlayItens.innerHTML += `<br><b>Total: R$ ${total.toFixed(2)}</b>`;
   
   overlay.classList.add('show');
-
   if(overlayTimer) clearTimeout(overlayTimer);
   overlayTimer = setTimeout(()=>{ fecharOverlay(); },10000);
 });
 
 function fecharOverlay(){
   overlay.classList.remove('show');
+  document.getElementById('pagamentoOpcoes').style.display='none';
   if(overlayTimer) { clearTimeout(overlayTimer); overlayTimer = null; }
 }
 
-// Confirmar pedido
 document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
+  document.getElementById('pagamentoOpcoes').style.display = 'flex';
+});
+
+function confirmarComForma(forma) {
   const items = [];
   let total = 0;
   for (let id in carrinho) {
@@ -357,7 +355,7 @@ document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
     }
   }
 
-  const pedido = { order_id: "PED-" + Date.now(), total: total, items: items };
+  const pedido = { order_id: "PED-" + Date.now(), total: total, items: items, forma_pagamento: forma };
 
   fetch('https://futuro-b32e6f57c219.herokuapp.com/pedido', {
     method: "POST",
@@ -368,7 +366,7 @@ document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
     if(resp.ok){
       carrinho={};
       atualizarCarrinho();
-      alert("✅ Pedido enviado! Aperte o botão verde da máquina para continuar.");
+      alert(`✅ Pedido enviado (${forma.toUpperCase()})! Aperte o botão verde da máquina para continuar.`);
     } else {
       cancelarPedido();
       alert("❌ Erro ao enviar pedido! Estoque restaurado.");
@@ -379,9 +377,10 @@ document.getElementById('overlayConfirmarBtn').addEventListener('click', () => {
     console.error("Erro no fetch:", err);
   });
 
+  document.getElementById('pagamentoOpcoes').style.display='none';
+  fecharOverlay();
   resetTimerLimpeza();
-});
-
+}
 
 function resetTimerLimpeza(){
   if(timerLimpeza) clearTimeout(timerLimpeza);
@@ -399,28 +398,18 @@ mostrarProdutos();
 </div>
 
 <script>
-  const telaRepouso = document.getElementById("telaRepouso");
-  let timerInatividade;
-
-  function mostrarTelaRepouso() {
-    telaRepouso.classList.add("ativo");
-  }
-
-  function esconderTelaRepouso() {
-    telaRepouso.classList.remove("ativo");
-    reiniciarTimer();
-  }
-
-  function reiniciarTimer() {
-    clearTimeout(timerInatividade);
-    timerInatividade = setTimeout(mostrarTelaRepouso, 3 * 60 * 1000); // 3 minutos
-  }
-
-  ['click', 'mousemove', 'keypress', 'touchstart', 'scroll'].forEach(evt => {
-    document.addEventListener(evt, esconderTelaRepouso);
-  });
-
-  mostrarTelaRepouso();
+const telaRepouso = document.getElementById("telaRepouso");
+let timerInatividade;
+function mostrarTelaRepouso() { telaRepouso.classList.add("ativo"); }
+function esconderTelaRepouso() { telaRepouso.classList.remove("ativo"); reiniciarTimer(); }
+function reiniciarTimer() {
+  clearTimeout(timerInatividade);
+  timerInatividade = setTimeout(mostrarTelaRepouso, 3 * 60 * 1000);
+}
+['click', 'mousemove', 'keypress', 'touchstart', 'scroll'].forEach(evt => {
+  document.addEventListener(evt, esconderTelaRepouso);
+});
+mostrarTelaRepouso();
 </script>
 </body>
 </html>
