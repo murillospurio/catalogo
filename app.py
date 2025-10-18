@@ -20,7 +20,6 @@ os.makedirs("pedidos_aprovados", exist_ok=True)
 os.makedirs("pedidos_pendentes", exist_ok=True)
 
 
-# === FUNÇÃO: CRIAR PAGAMENTO NA MAQUININHA ===
 def criar_pagamento_maquininha(amount, descricao="Pedido", order_id=None, forma_pagamento="debito"):
     if order_id in pedidos_pendentes:
         print(f"⚠️ Pedido {order_id} já possui cobrança pendente. Ignorando nova criação.")
